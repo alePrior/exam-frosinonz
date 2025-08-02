@@ -55,44 +55,50 @@ class Bubble {
     }
   }
 
-  update() {
-    // Add small random movement
-    this.vx += random(-0.05, 0.05);
-    this.vy += random(-0.05, 0.05);
+  update(isHovered = false) {
+    if (!isHovered) { // Only update movement if not hovered
+      // Add small random movement
+      this.vx += random(-0.05, 0.05);
+      this.vy += random(-0.05, 0.05);
 
-    // Enforce minimum velocity
-    const minSpeed = 0.2;
-    const speed = sqrt(this.vx * this.vx + this.vy * this.vy);
-    if (speed < minSpeed) {
-      this.vx = (this.vx / speed) * minSpeed;
-      this.vy = (this.vy / speed) * minSpeed;
+      // Enforce minimum velocity
+      const minSpeed = 0.2;
+      const speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+      if (speed < minSpeed) {
+        this.vx = (this.vx / speed) * minSpeed;
+        this.vy = (this.vy / speed) * minSpeed;
+      }
+
+      // Enforce maximum velocity
+      const maxSpeed = 2;
+      if (speed > maxSpeed) {
+        this.vx = (this.vx / speed) * maxSpeed;
+        this.vy = (this.vy / speed) * maxSpeed;
+      }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Bounce off walls
+      if (this.x - this.r < 0 || this.x + this.r > width) {
+        this.vx *= -0.8;
+      }
+      if (this.y - this.r < 0 || this.y + this.r > height) {
+        this.vy *= -0.8;
+      }
+
+      // Keep inside canvas
+      this.x = constrain(this.x, this.r, width - this.r);
+      this.y = constrain(this.y, this.r, height - this.r);
+
+      // Add gentle friction
+      this.vx *= 0.995;
+      this.vy *= 0.995;
+    } else {
+      // When hovered, gradually reduce velocity to zero
+      this.vx *= 0.7;
+      this.vy *= 0.7;
     }
-
-    // Enforce maximum velocity
-    const maxSpeed = 2;
-    if (speed > maxSpeed) {
-      this.vx = (this.vx / speed) * maxSpeed;
-      this.vy = (this.vy / speed) * maxSpeed;
-    }
-
-    this.x += this.vx;
-    this.y += this.vy;
-
-    // Bounce off walls
-    if (this.x - this.r < 0 || this.x + this.r > width) {
-      this.vx *= -0.8;
-    }
-    if (this.y - this.r < 0 || this.y + this.r > height) {
-      this.vy *= -0.8;
-    }
-
-    // Keep inside canvas
-    this.x = constrain(this.x, this.r, width - this.r);
-    this.y = constrain(this.y, this.r, height - this.r);
-
-    // Add gentle friction
-    this.vx *= 0.995;
-    this.vy *= 0.995;
   }
 
   contains(px, py) {
@@ -327,14 +333,18 @@ function draw() {
     }
   }
 
-  // Update and show all bubbles
-  for (let i = 0; i < bubbles.length; i++) {
-    bubbles[i].update();
-    
-    // Check collisions with other bubbles
-    for (let j = i + 1; j < bubbles.length; j++) {
-      bubbles[i].collide(bubbles[j]);
-    }
+     // Update and show all bubbles
+   for (let i = 0; i < bubbles.length; i++) {
+     // Pass whether this bubble is being hovered
+     const isHovered = bubbles[i] === hoveredBubble;
+     bubbles[i].update(isHovered);
+     
+     // Check collisions with other bubbles only if not hovered
+     if (!isHovered) {
+       for (let j = i + 1; j < bubbles.length; j++) {
+         bubbles[i].collide(bubbles[j]);
+       }
+     }
     
     // Determine if this bubble should be highlighted
     const isHighlighted = hoveredBubble && 
