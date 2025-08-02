@@ -4,6 +4,7 @@ const api_chart_gettopartists = `https://ws.audioscrobbler.com/2.0/?method=chart
 let bubbles = [];
 let artists = [];
 let hoveredBubble = null;
+let lastClickedBubble = null;
 let connections = [];
 
 class Connection {
@@ -30,6 +31,7 @@ class Bubble {
     this.vy = random(-1, 1);
     this.isSimilar = isSimilar;
     this.parentBubble = parentBubble;
+    this.similarArtistsFetched = false; // Track if we've already fetched similar artists
   }
 
   collide(other) {
@@ -100,8 +102,10 @@ class Bubble {
 
   show(isHighlighted = false) {
     noStroke();
-    // Different color and opacity based on highlight state
-    if (isHighlighted) {
+    // Different color and opacity based on highlight state and if it's the last clicked bubble
+    if (this === lastClickedBubble) {
+      fill('#ff5c58'); // Bright red for last clicked bubble
+    } else if (isHighlighted) {
       if (this.isSimilar) {
         fill(150, 150, 255); // Solid light blue for highlighted similar artists
       } else {
@@ -260,11 +264,16 @@ function mousePressed() {
   // Check if we clicked on a bubble
   for (let bubble of bubbles) {
     if (bubble.contains(mouseX, mouseY)) {
-      // Remove existing similar artists and connections for this bubble
-      bubbles = bubbles.filter(b => b.parentBubble !== bubble);
-      connections = connections.filter(c => c.source !== bubble);
-      
-      fetchSimilarArtists(bubble.name, bubble);
+      // Only fetch similar artists if we haven't already
+      if (!bubble.similarArtistsFetched) {
+        // Remove existing similar artists and connections for this bubble
+        bubbles = bubbles.filter(b => b.parentBubble !== bubble);
+        connections = connections.filter(c => c.source !== bubble);
+        
+        fetchSimilarArtists(bubble.name, bubble);
+        bubble.similarArtistsFetched = true; // Mark as fetched
+        lastClickedBubble = bubble; // Update last clicked bubble
+      }
       break;
     }
   }
@@ -338,7 +347,8 @@ function draw() {
   // Draw tooltip for hovered bubble
   if (hoveredBubble) {
     hoveredBubble.showTooltip();
-    cursor(HAND);
+    // Show pointer cursor only if we haven't fetched similar artists yet
+    cursor(hoveredBubble.similarArtistsFetched ? ARROW : HAND);
   } else {
     cursor(ARROW);
   }
