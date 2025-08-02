@@ -38,6 +38,25 @@ class Bubble {
   }
 
   update() {
+    // Add small random movement
+    this.vx += random(-0.05, 0.05);
+    this.vy += random(-0.05, 0.05);
+
+    // Enforce minimum velocity
+    const minSpeed = 0.2;
+    const speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (speed < minSpeed) {
+      this.vx = (this.vx / speed) * minSpeed;
+      this.vy = (this.vy / speed) * minSpeed;
+    }
+
+    // Enforce maximum velocity
+    const maxSpeed = 2;
+    if (speed > maxSpeed) {
+      this.vx = (this.vx / speed) * maxSpeed;
+      this.vy = (this.vy / speed) * maxSpeed;
+    }
+
     this.x += this.vx;
     this.y += this.vy;
 
@@ -53,9 +72,9 @@ class Bubble {
     this.x = constrain(this.x, this.r, width - this.r);
     this.y = constrain(this.y, this.r, height - this.r);
 
-    // Add some friction
-    this.vx *= 0.99;
-    this.vy *= 0.99;
+    // Add gentle friction
+    this.vx *= 0.995;
+    this.vy *= 0.995;
   }
 
   contains(px, py) {
