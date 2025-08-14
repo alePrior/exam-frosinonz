@@ -20,6 +20,16 @@ class Connection {
   }
 }
 
+// Funzione per formattare il numero di ascolti
+function formatPlayCount(count) {
+  if (count >= 1000000) {
+    return Math.round(count / 1000000) + 'M';
+  } else if (count >= 1000) {
+    return Math.round(count / 1000) + 'K';
+  }
+  return count.toString();
+}
+
 class Bubble {
   constructor(x, y, r, name, playcount, isSimilar = false, parentBubble = null) {
     this.x = x;
@@ -57,9 +67,12 @@ class Bubble {
 
   update(isHovered = false) {
     if (!isHovered) { // Only update movement if not hovered
-      // Add small random movement
-      this.vx += random(-0.05, 0.05);
-      this.vy += random(-0.05, 0.05);
+      // Add uniform circular movement
+      const angle = atan2(this.vy, this.vx);
+      const newAngle = angle; // Leggera rotazione costante (aggiungi + 0.01 se la si vuole)
+      const currentSpeed = sqrt(this.vx * this.vx + this.vy * this.vy);
+      this.vx = cos(newAngle) * currentSpeed;
+      this.vy = sin(newAngle) * currentSpeed;
 
       // Enforce minimum velocity
       const minSpeed = 0.2;
@@ -126,11 +139,17 @@ class Bubble {
     }
     ellipse(this.x, this.y, this.r * 2);
     
-    // Draw artist name inside bubble
+    // Draw play count inside bubble
     fill(0);
     textAlign(CENTER, CENTER);
-    textSize(this.r * 0.2);
-    text(this.name, this.x, this.y);
+    textSize(11);
+    text(formatPlayCount(parseInt(this.playcount)), this.x, this.y);
+    
+    // Draw artist name below bubble
+    fill(255); // Colore bianco per il testo
+    textAlign(CENTER, TOP);
+    textSize(14); // Dimensione fissa del font
+    text(this.name, this.x, this.y + this.r + 5); // 5 pixel di spazio tra la bolla e il testo
   }
 
   showTooltip() {
