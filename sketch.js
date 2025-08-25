@@ -280,8 +280,8 @@ function createBubbles() {
 }
 
 function setup() {
-  // Create canvas the size of the viewport
-  createCanvas(windowWidth, windowHeight);
+  // Create canvas the size of the viewport minus the menu width
+  createCanvas(windowWidth - 200, windowHeight);
   fetchArtists();
 }
 
@@ -306,7 +306,7 @@ function mousePressed() {
 
 // Handle window resize
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
+  resizeCanvas(windowWidth - 200, windowHeight);
   if (artists.length > 0) {
     createBubbles(); // Recreate bubbles with new canvas dimensions
   }
