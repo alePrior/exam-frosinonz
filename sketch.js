@@ -3,6 +3,7 @@ const api_chart_gettopartists = `https://ws.audioscrobbler.com/2.0/?method=chart
 const api_tag_gettoptags = `https://ws.audioscrobbler.com/2.0/?method=tag.getTopTags&api_key=${api_key}&format=json`;
 
 let bubbles = [];
+let topTags = [];
 let artists = [];
 let hoveredBubble = null;
 let lastClickedBubble = null;
@@ -10,7 +11,6 @@ let connections = [];
 let isIsolationMode = true; // true = isolation mode (default), false = cumulative mode
 let hasFirstClick = false;
 let effectiveWidth; // width available for bubbles (windowWidth - menuWidth)
-let topTags = []; // Store top tags data
 
 class Connection {
   constructor(source, target) {
@@ -301,18 +301,14 @@ function createBubbles() {
 
 class SideMenu {
   constructor() {
-    this.width = 300; // Increased width to accommodate the table
+    this.width = 300;  // Increased width to accommodate the table
     this.padding = 20;
     this.buttonHeight = 40;
-    this.buttonMargin = 20; // Increased margin between elements
+    this.buttonMargin = 10;
     this.isHoveringMode = false;
     this.isHoveringReset = false;
-    this.rowHeight = 30; // Height of each table row
-    
-    // Calculate tableStartY based on buttons position
-    const modeButtonY = this.padding;
-    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
-    this.tableStartY = resetButtonY + this.buttonHeight + this.buttonMargin * 2; // Added extra margin after buttons
+    this.tableTop = this.padding * 2 + this.buttonHeight * 2 + this.buttonMargin;
+    this.rowHeight = 30;
   }
 
   contains(px, py) {
@@ -383,50 +379,38 @@ class SideMenu {
     text('Reset Visualizzazione',
          this.width / 2, resetButtonY + this.buttonHeight / 2);
 
-    // Draw Top Tags table
-    this.showTopTagsTable();
-  }
-
-  showTopTagsTable() {
-    // Table title
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(18);
-    text('Top Tags', this.width / 2, this.tableStartY - 10);
-
-    // Table header
-    fill(255);
-    textAlign(LEFT, CENTER);
-    textSize(14);
-    const headerY = this.tableStartY + 20; // Moved header down to accommodate title
-    text('Tag', this.padding, headerY);
-    text('Count', this.width/2 - 20, headerY);
-    text('Reach', this.width - 80, headerY);
-
-    // Draw separator line
-    stroke(255, 100);
-    line(this.padding, headerY + 15, this.width - this.padding, headerY + 15);
-
-    // Table content
-    noStroke();
-    textSize(12);
-    let y = headerY + 30;
-    
-    for (let tag of topTags) {
-      // Tag name
+    // Draw tags table
+    if (topTags.length > 0) {
+      // Table header
       fill(255);
-      text(tag.name, this.padding, y);
-      
-      // Count
-      text(formatPlayCount(tag.count), this.width/2 - 20, y);
-      
-      // Reach
-      text(formatPlayCount(tag.reach), this.width - 80, y);
-      
-      y += this.rowHeight;
-      
-      // Break if we're running out of space
-      if (y > height - this.padding) break;
+      textAlign(LEFT, CENTER);
+      textSize(14);
+      text('Tag', this.padding, this.tableTop);
+      textAlign(RIGHT, CENTER);
+      text('Count', this.width - this.padding - 80, this.tableTop);
+      text('Reach', this.width - this.padding, this.tableTop);
+
+      // Table rows
+      for (let i = 0; i < Math.min(20, topTags.length); i++) {
+        const tag = topTags[i];
+        const y = this.tableTop + (i + 1) * this.rowHeight;
+        
+        // Alternate row background
+        if (i % 2 === 0) {
+          fill(255, 255, 255, 20);
+          noStroke();
+          rect(this.padding, y - this.rowHeight/2, 
+               this.width - this.padding * 2, this.rowHeight);
+        }
+        
+        // Tag data
+        fill(255);
+        textAlign(LEFT, CENTER);
+        text(tag.name, this.padding, y);
+        textAlign(RIGHT, CENTER);
+        text(tag.count.toLocaleString(), this.width - this.padding - 80, y);
+        text(tag.reach.toLocaleString(), this.width - this.padding, y);
+      }
     }
   }
 }
@@ -442,9 +426,9 @@ function setup() {
   effectiveWidth = windowWidth - sideMenu.width;
   // Initialize window variable for communication with HTML
   window.isIsolationMode = isIsolationMode;
-  // Fetch both artists and top tags
-  fetchArtists();
+  // Fetch both artists and tags
   fetchTopTags();
+  fetchArtists();
 }
 
 function mousePressed() {
