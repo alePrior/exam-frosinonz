@@ -296,6 +296,8 @@ async function fetchArtistInfo(artistName) {
 async function fetchArtists() {
   try {
     const tagParam = getUrlParameter('tag');
+    // Update title based on tag parameter
+    currentViewTitle = tagParam ? `Top artisti con tag ${tagParam}` : "Top artisti ascoltati";
     let apiUrl;
     
     if (tagParam) {
@@ -508,6 +510,7 @@ class SideMenu {
 }
 
 let sideMenu;
+let currentViewTitle = "Top artisti ascoltati";
 
 function setup() {
   // Create canvas the size of the viewport minus the menu width
@@ -539,6 +542,9 @@ function mousePressed() {
     if (bubble.contains(adjustedMouseX, mouseY)) {
       // Only fetch similar artists if we haven't already
       if (!bubble.similarArtistsFetched) {
+        // Update title
+        currentViewTitle = `Artisti simili a ${bubble.name}`;
+        
         // Handle first click - remove default bubbles
         if (!hasFirstClick) {
           // First click always removes default bubbles
@@ -597,6 +603,12 @@ function draw() {
   // Translate everything else to account for menu width
   push();
   translate(sideMenu.width, 0);
+  
+  // Draw title
+  fill(255);
+  textAlign(LEFT, TOP);
+  textSize(24);
+  text(currentViewTitle, 20, 20);
   
   // Find connected bubbles if there's a hovered bubble
   let connectedBubbles = new Set();
