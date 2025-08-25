@@ -8,6 +8,7 @@ let lastClickedBubble = null;
 let connections = [];
 let isIsolationMode = true; // true = isolation mode (default), false = cumulative mode
 let hasFirstClick = false;
+let effectiveWidth; // width available for bubbles (windowWidth - menuWidth)
 
 class Connection {
   constructor(source, target) {
@@ -95,7 +96,7 @@ class Bubble {
       this.y += this.vy;
 
       // Bounce off walls
-      if (this.x - this.r < 0 || this.x + this.r > width) {
+      if (this.x - this.r < 0 || this.x + this.r > effectiveWidth) {
         this.vx *= -0.8;
       }
       if (this.y - this.r < 0 || this.y + this.r > height) {
@@ -103,7 +104,7 @@ class Bubble {
       }
 
       // Keep inside canvas
-      this.x = constrain(this.x, this.r, width - this.r);
+      this.x = constrain(this.x, this.r, effectiveWidth - this.r);
       this.y = constrain(this.y, this.r, height - this.r);
 
       // Add gentle friction
@@ -118,6 +119,11 @@ class Bubble {
 
   contains(px, py) {
     let d = dist(px, py, this.x, this.y);
+    return d < this.r;
+  }
+
+  containsWithOffset(px, py, offsetX) {
+    let d = dist(px - offsetX, py, this.x, this.y);
     return d < this.r;
   }
 
@@ -275,24 +281,120 @@ function createBubbles() {
   // Create bubbles for each artist
   artists.forEach(artist => {
     const radius = map(parseInt(artist.playcount), 0, maxPlaycount, 20, 80);
-    const x = random(radius, width - radius);
+    const x = random(radius, effectiveWidth - radius);
     const y = random(radius, height - radius);
     bubbles.push(new Bubble(x, y, radius, artist.name, artist.playcount));
   });
 }
 
+class SideMenu {
+  constructor() {
+    this.width = 200;
+    this.padding = 20;
+    this.buttonHeight = 40;
+    this.buttonMargin = 10;
+    this.isHoveringMode = false;
+    this.isHoveringReset = false;
+  }
+
+  contains(px, py) {
+    return px >= 0 && px <= this.width && py >= 0 && py <= height;
+  }
+
+  checkButtons(px, py) {
+    // Mode button bounds
+    const modeButtonY = this.padding;
+    this.isHoveringMode = px >= this.padding && 
+                         px <= this.width - this.padding &&
+                         py >= modeButtonY && 
+                         py <= modeButtonY + this.buttonHeight;
+
+    // Reset button bounds
+    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
+    this.isHoveringReset = px >= this.padding && 
+                          px <= this.width - this.padding &&
+                          py >= resetButtonY && 
+                          py <= resetButtonY + this.buttonHeight;
+
+    return this.isHoveringMode || this.isHoveringReset;
+  }
+
+  handleClick(px, py) {
+    if (this.isHoveringMode) {
+      isIsolationMode = !isIsolationMode;
+      return true;
+    } else if (this.isHoveringReset) {
+      // Reset the application state
+      bubbles = [];
+      connections = [];
+      hasFirstClick = false;
+      lastClickedBubble = null;
+      fetchArtists();
+      return true;
+    }
+    return false;
+  }
+
+  show() {
+    // Draw menu background
+    noStroke();
+    fill('#333333');
+    rect(0, 0, this.width, height);
+
+    // Mode toggle button
+    const modeButtonY = this.padding;
+    fill(this.isHoveringMode ? '#45a049' : '#4CAF50');
+    rect(this.padding, modeButtonY, 
+         this.width - this.padding * 2, this.buttonHeight, 4);
+    
+    // Mode button text
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text('Modalità: ' + (isIsolationMode ? 'Isolamento' : 'Cumulativa'),
+         this.width / 2, modeButtonY + this.buttonHeight / 2);
+
+    // Reset button
+    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
+    fill(this.isHoveringReset ? '#d44937' : '#e74c3c');
+    rect(this.padding, resetButtonY, 
+         this.width - this.padding * 2, this.buttonHeight, 4);
+    
+    // Reset button text
+    fill(255);
+    text('Reset Visualizzazione',
+         this.width / 2, resetButtonY + this.buttonHeight / 2);
+  }
+}
+
+let sideMenu;
+
 function setup() {
   // Create canvas the size of the viewport minus the menu width
-  createCanvas(windowWidth - 200, windowHeight);
+  createCanvas(windowWidth, windowHeight);
+  // Initialize menu
+  sideMenu = new SideMenu();
+  // Calculate effective width
+  effectiveWidth = windowWidth - sideMenu.width;
   // Initialize window variable for communication with HTML
   window.isIsolationMode = isIsolationMode;
   fetchArtists();
 }
 
 function mousePressed() {
+  // First check if we clicked on the menu
+  if (sideMenu.contains(mouseX, mouseY)) {
+    if (sideMenu.handleClick(mouseX, mouseY)) {
+      return; // Click was handled by menu
+    }
+  }
+
+  // Adjust mouseX to account for menu offset when checking bubbles
+  const adjustedMouseX = mouseX - sideMenu.width;
+  
   // Check if we clicked on a bubble
   for (let bubble of bubbles) {
-    if (bubble.contains(mouseX, mouseY)) {
+    if (bubble.contains(adjustedMouseX, mouseY)) {
       // Only fetch similar artists if we haven't already
       if (!bubble.similarArtistsFetched) {
         // Handle first click - remove default bubbles
@@ -333,7 +435,8 @@ function mousePressed() {
 
 // Handle window resize
 function windowResized() {
-  resizeCanvas(windowWidth - 200, windowHeight);
+  resizeCanvas(windowWidth, windowHeight);
+  effectiveWidth = windowWidth - sideMenu.width;
   if (artists.length > 0) {
     createBubbles(); // Recreate bubbles with new canvas dimensions
   }
@@ -341,8 +444,17 @@ function windowResized() {
 
 function draw() {
   // Sync isolation mode with window variable
-  isIsolationMode = window.isIsolationMode;
+  window.isIsolationMode = isIsolationMode;
   background('#1c2128');
+  
+  // Draw menu first
+  push();
+  sideMenu.show();
+  pop();
+  
+  // Translate everything else to account for menu width
+  push();
+  translate(sideMenu.width, 0);
   
   // Find connected bubbles if there's a hovered bubble
   let connectedBubbles = new Set();
@@ -374,10 +486,12 @@ function draw() {
   // Update hoveredBubble
   hoveredBubble = null;
   // Check bubbles in reverse order to detect top-most bubble first
-  for (let i = bubbles.length - 1; i >= 0; i--) {
-    if (bubbles[i].contains(mouseX, mouseY)) {
-      hoveredBubble = bubbles[i];
-      break;
+  if (!sideMenu.contains(mouseX, mouseY)) {
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      if (bubbles[i].containsWithOffset(mouseX, mouseY, sideMenu.width)) {
+        hoveredBubble = bubbles[i];
+        break;
+      }
     }
   }
 
@@ -408,6 +522,18 @@ function draw() {
     // Show pointer cursor only if we haven't fetched similar artists yet
     cursor(hoveredBubble.similarArtistsFetched ? ARROW : HAND);
   } else {
-    cursor(ARROW);
+    // Check if hovering over menu buttons
+    if (sideMenu.contains(mouseX, mouseY)) {
+      if (sideMenu.checkButtons(mouseX, mouseY)) {
+        cursor(HAND);
+      } else {
+        cursor(ARROW);
+      }
+    } else {
+      cursor(ARROW);
+    }
   }
+  
+  // End translation for main content
+  pop();
 }
