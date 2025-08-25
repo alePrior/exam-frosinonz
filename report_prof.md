@@ -8,6 +8,7 @@ I menu, o caselle di selezione, possono effettivamente aiutare a compiere qualch
 - interfaccia possibile con HTML, CSS o p5js
 
 to do:
+- ✅ menu laterale
 - menu con temi grafici
 - filtri (vedere API per sapere i filtri)
 
@@ -25,9 +26,9 @@ Quando si seleziona un nuovo artista, eviterei di lasciare i collegamenti dell'a
 - interfaccia con collegamenti e azzeramento
 
 to do:
-- clic su un artista -> mostra i suoi collegamenti, nascondi gli altri artisti di default (bolle grigie)
+- ✅ clic su un artista -> mostra i suoi collegamenti, nascondi gli altri artisti di default (bolle grigie)
 - possibilità di ritornare alla visualizzazione iniziale (comando nel menù laterale)
-- clic su un artista -> nascondi/preserva collegamenti precedenti (comando nel menù laterale)
+- ✅ clic su un artista -> nascondi/preserva collegamenti precedenti (comando nel menù laterale)
 
 Inizierei anche a pensare un po' all'interfaccia generale, giusto per tenere conto di quello che dovrà essere presente nella schermata, compreso il link alla relazione di progetto. Per semplificarvi un po' la vita con la programmazione, potreste prendere in considerazione la possibilità di suddividere il codice in più file [https://codesthesia.net/pagg/concetti/suddividere-il-codice/]. Il codice di sketch.js potrebbe fare solo da "regista" complessivo mentre i singoli file potrebbero contenere classi o gruppi di funzioni dello stesso tipo.
 

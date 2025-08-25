@@ -58,7 +58,16 @@
 </head>
 <body>
     <div id="side-menu">
-        <button class="menu-button">Menu Button</button>
+        <button class="menu-button" onclick="toggleMode()">
+            <span id="mode-text">Modalità: Isolamento</span>
+        </button>
     </div>
+    <script>
+        function toggleMode() {
+            window.isIsolationMode = !window.isIsolationMode;
+            document.getElementById('mode-text').textContent = 
+                'Modalità: ' + (window.isIsolationMode ? 'Isolamento' : 'Cumulativa');
+        }
+    </script>
 </body>
 </html>

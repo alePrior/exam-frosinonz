@@ -6,6 +6,8 @@ let artists = [];
 let hoveredBubble = null;
 let lastClickedBubble = null;
 let connections = [];
+let isIsolationMode = true; // true = isolation mode (default), false = cumulative mode
+let hasFirstClick = false;
 
 class Connection {
   constructor(source, target) {
@@ -282,6 +284,8 @@ function createBubbles() {
 function setup() {
   // Create canvas the size of the viewport minus the menu width
   createCanvas(windowWidth - 200, windowHeight);
+  // Initialize window variable for communication with HTML
+  window.isIsolationMode = isIsolationMode;
   fetchArtists();
 }
 
@@ -291,11 +295,34 @@ function mousePressed() {
     if (bubble.contains(mouseX, mouseY)) {
       // Only fetch similar artists if we haven't already
       if (!bubble.similarArtistsFetched) {
-        // Remove existing similar artists and connections for this bubble
-        bubbles = bubbles.filter(b => b.parentBubble !== bubble);
-        connections = connections.filter(c => c.source !== bubble);
+        // Handle first click - remove default bubbles
+        if (!hasFirstClick) {
+          // First click always removes default bubbles
+          bubbles = bubbles.filter(b => b === bubble);
+          connections = [];
+          hasFirstClick = true;
+        } 
+        // Handle subsequent clicks based on mode
+        else if (isIsolationMode) {
+          // In isolation mode, remove all except the clicked bubble
+          bubbles = bubbles.filter(b => b === bubble);
+          connections = [];
+        }
+        // In cumulative mode, we don't filter any bubbles or connections
         
-        fetchSimilarArtists(bubble.name, bubble);
+        // Store the current bubbles and connections before fetching
+        const currentBubbles = isIsolationMode ? [bubble] : [...bubbles];
+        const currentConnections = isIsolationMode ? [] : [...connections];
+        
+        // After fetching completes, merge with existing if in cumulative mode
+        fetchSimilarArtists(bubble.name, bubble).then(() => {
+          if (!isIsolationMode && hasFirstClick) {
+            // Ensure we don't lose the previous bubbles and connections
+            bubbles = [...currentBubbles, ...bubbles.filter(b => !currentBubbles.includes(b))];
+            connections = [...currentConnections, ...connections];
+          }
+        });
+        
         bubble.similarArtistsFetched = true; // Mark as fetched
         lastClickedBubble = bubble; // Update last clicked bubble
       }
@@ -313,6 +340,8 @@ function windowResized() {
 }
 
 function draw() {
+  // Sync isolation mode with window variable
+  isIsolationMode = window.isIsolationMode;
   background('#1c2128');
   
   // Find connected bubbles if there's a hovered bubble
