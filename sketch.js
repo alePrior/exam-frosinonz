@@ -2,6 +2,14 @@ const api_key = "262eda05c5e0a4265750d3cfb1611332";
 const api_chart_gettopartists = `https://ws.audioscrobbler.com/2.0/?method=chart.getTopArtists&api_key=${api_key}&format=json`;
 const api_tag_gettoptags = `https://ws.audioscrobbler.com/2.0/?method=tag.getTopTags&api_key=${api_key}&format=json`;
 
+// Function to get URL parameters
+function getUrlParameter(name) {
+  name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+  const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+  const results = regex.exec(location.search);
+  return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+}
+
 let bubbles = [];
 let topTags = [];
 let artists = [];
@@ -273,11 +281,51 @@ async function fetchTopTags() {
   }
 }
 
+async function fetchArtistInfo(artistName) {
+  try {
+    const infoUrl = `https://ws.audioscrobbler.com/2.0/?method=artist.getInfo&artist=${encodeURIComponent(artistName)}&api_key=${api_key}&format=json`;
+    const response = await fetch(infoUrl);
+    const data = await response.json();
+    return data.artist?.stats?.playcount || "0";
+  } catch (error) {
+    console.error('Error fetching artist info:', error);
+    return "0";
+  }
+}
+
 async function fetchArtists() {
   try {
-    const response = await fetch(api_chart_gettopartists);
+    const tagParam = getUrlParameter('tag');
+    let apiUrl;
+    
+    if (tagParam) {
+      // If tag parameter exists, use tag.getTopArtists
+      apiUrl = `https://ws.audioscrobbler.com/2.0/?method=tag.getTopArtists&tag=${encodeURIComponent(tagParam)}&api_key=${api_key}&format=json`;
+    } else {
+      // Otherwise use chart.getTopArtists
+      apiUrl = api_chart_gettopartists;
+    }
+
+    const response = await fetch(apiUrl);
     const data = await response.json();
-    artists = data.artists.artist;
+    
+    // Handle different response structures
+    if (tagParam) {
+      const tagArtists = data.topartists.artist;
+      // We need to fetch playcount for each artist when using tag.getTopArtists
+      artists = await Promise.all(
+        tagArtists.map(async (artist) => {
+          const playcount = await fetchArtistInfo(artist.name);
+          return {
+            ...artist,
+            playcount: playcount
+          };
+        })
+      );
+    } else {
+      artists = data.artists.artist;
+    }
+    
     createBubbles();
   } catch (error) {
     console.error('Error fetching data:', error);
@@ -309,6 +357,7 @@ class SideMenu {
     this.isHoveringReset = false;
     this.tableTop = this.padding * 2 + this.buttonHeight * 2 + this.buttonMargin;
     this.rowHeight = 30;
+    this.hoveredTagIndex = -1;  // Track which tag is being hovered
   }
 
   contains(px, py) {
@@ -330,6 +379,21 @@ class SideMenu {
                           py >= resetButtonY && 
                           py <= resetButtonY + this.buttonHeight;
 
+    // Check tag hovering
+    this.hoveredTagIndex = -1;
+    if (topTags.length > 0 && 
+        px >= this.padding && 
+        px <= this.width - this.padding - 160) {  // Only the tag name area is clickable
+      const relativeY = py - this.tableTop - this.rowHeight;
+      if (relativeY >= 0) {
+        const index = Math.floor(relativeY / this.rowHeight);
+        if (index >= 0 && index < Math.min(20, topTags.length)) {
+          this.hoveredTagIndex = index;
+          return true;
+        }
+      }
+    }
+
     return this.isHoveringMode || this.isHoveringReset;
   }
 
@@ -343,7 +407,12 @@ class SideMenu {
       connections = [];
       hasFirstClick = false;
       lastClickedBubble = null;
-      fetchArtists();
+      window.location.href = window.location.pathname; // Remove query parameters
+      return true;
+    } else if (this.hoveredTagIndex >= 0 && this.hoveredTagIndex < topTags.length) {
+      // Handle tag click
+      const tag = topTags[this.hoveredTagIndex];
+      window.location.href = `${window.location.pathname}?tag=${encodeURIComponent(tag.name)}`;
       return true;
     }
     return false;
@@ -376,11 +445,14 @@ class SideMenu {
     
     // Reset button text
     fill(255);
-    text('Reset Visualizzazione',
+    text('Mostra Artisti Top',
          this.width / 2, resetButtonY + this.buttonHeight / 2);
 
     // Draw tags table
     if (topTags.length > 0) {
+      // Get current tag from URL
+      const currentTag = getUrlParameter('tag');
+
       // Table header
       fill(255);
       textAlign(LEFT, CENTER);
@@ -406,7 +478,27 @@ class SideMenu {
         // Tag data
         fill(255);
         textAlign(LEFT, CENTER);
+        
+        // Highlight conditions
+        const isCurrentTag = currentTag && tag.name.toLowerCase() === currentTag.toLowerCase();
+        const isHovered = i === this.hoveredTagIndex;
+        
+        // Apply highlighting
+        if (isCurrentTag) {
+          // Selected tag gets a distinctive background
+          fill('#2196F3');  // Blue background for selected tag
+          noStroke();
+          rect(this.padding, y - this.rowHeight/2, 
+               this.width - this.padding * 2, this.rowHeight);
+          fill(255);  // White text for selected tag
+        }
+        if (isHovered) {
+          fill('#4CAF50');  // Green text for hover
+          cursor(HAND);
+        }
+        
         text(tag.name, this.padding, y);
+        fill(isCurrentTag ? 255 : 255);  // Keep text white if selected
         textAlign(RIGHT, CENTER);
         text(tag.count.toLocaleString(), this.width - this.padding - 80, y);
         text(tag.reach.toLocaleString(), this.width - this.padding, y);
