@@ -61,12 +61,19 @@
         <button class="menu-button" onclick="toggleMode()">
             <span id="mode-text">Modalità: Isolamento</span>
         </button>
+        <button class="menu-button" onclick="resetApp()" style="margin-top: 20px; background-color: #e74c3c;">
+            Reset Visualizzazione
+        </button>
     </div>
     <script>
         function toggleMode() {
             window.isIsolationMode = !window.isIsolationMode;
             document.getElementById('mode-text').textContent = 
                 'Modalità: ' + (window.isIsolationMode ? 'Isolamento' : 'Cumulativa');
+        }
+
+        function resetApp() {
+            location.reload();
         }
     </script>
 </body>
