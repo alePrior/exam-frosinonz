@@ -63,6 +63,7 @@ Il progetto dell'interfaccia può essere utile anche per capire cosa ci deve fin
 
 Ho poi notato un ritardo, a volte anche di più secondi, nell'apparizione degli artisti correlati. Da quello che ho visto, sommariamente, nel codice, mi sembra che facciate caricare ogni volta il file JSON. Se le informazioni non cambiano così frequentemente, è meglio caricarle una sola volta in un array che occuperà più spazio in RAM ma permetterà di ottenere più velocemente le informazioni. Al limite si può prevedere un aggiornamento ogni tanto. 
 Delle ottimizzazioni sarebbe meglio occuparsi alla fine ma, sempre visti i tempi, potrebbe essere meglio iniziare a pensarci già ora.
+> ⚠️ Il preload dei dati rischia di saturare le richieste API bloccando le richieste. Suggerimento: animazione di loading al click di un artista.
 - TODO:
   - Ottimizzare il caricamento dei dati: caricare i JSON una sola volta e memorizzarli in un array
   - Prevedere un meccanismo di aggiornamento periodico dei dati se necessario
