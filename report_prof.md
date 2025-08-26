@@ -33,3 +33,39 @@ to do:
 Inizierei anche a pensare un po' all'interfaccia generale, giusto per tenere conto di quello che dovrà essere presente nella schermata, compreso il link alla relazione di progetto. Per semplificarvi un po' la vita con la programmazione, potreste prendere in considerazione la possibilità di suddividere il codice in più file [https://codesthesia.net/pagg/concetti/suddividere-il-codice/]. Il codice di sketch.js potrebbe fare solo da "regista" complessivo mentre i singoli file potrebbero contenere classi o gruppi di funzioni dello stesso tipo.
 
 - suddivisione del codice in più file
+
+# 26 agosto 2025
+
+Ciao Francesca (e Filippo), mi sembra che la modalità "Isolamento" sia più chiara ma va bene anche la possibilità di scegliere quella "Cumulativa". Forse userei termini diversi perché non sono così intuitivi. Soprattutto "Isolamento" ci ho messo un po' a capire a cosa si riferiva, prima di leggere la spiegazione del commento. Forse è meglio qualcosa come "Parziale", "Solo corrente", ecc., oppure il pulsante potrebbe diventare una checkbox (o qualcosa di simile) che attiva o disattiva l'accumulazione delle correlazioni.
+- TODO:
+  - Valutare la sostituzione dei termini "Isolamento" e "Cumulativa" con nomi più intuitivi (es. "Parziale", "Solo corrente", ecc.)
+  - Considerare la trasformazione del pulsante in una checkbox o altro controllo che attivi/disattivi l'accumulazione delle correlazioni
+
+Fra l'altro, la selezione della modalità non sembra funzionare perché non si ha nessun feedback visivo nella mappa. Ovviamente non ha senso aggiungere artisti a caso se si passa da "Isolamento" a "Cumulativo" ma si potrebbero togliere gli artisti precedenti nel passaggio contrario. Anche nel primo caso bisognerebbe prevedere comunque un feedback minimo, ad esempio qualche variante grafica che tenga conto della possibile compresenza di molti elementi grafici sovrapposti.      
+- TODO:
+  - Implementare un feedback visivo nella mappa quando si cambia modalità
+  - Gestire la rimozione degli artisti precedenti quando si passa da "Cumulativo" a "Isolamento"
+  - Prevedere una variante grafica che segnali la compresenza di molti elementi sovrapposti
+
+Per il resto non riesco a esprimermi su molto altro perché vedo che il pulsante "Mostra Artisti Top" e le singole voci sottostanti portano a un "Not found". Potrei solo consigliarvi di rendere attiva l'intera riga di ogni singolo artista anziché la sola area del nome... a meno che non vogliate rendere cliccabili anche gli altri due valori numerici. 
+- TODO:
+  - ✅ Correggere il problema del "Not found" per il pulsante "Mostra Artisti Top" e le voci degli artisti
+  - Rendere cliccabile l'intera riga di ogni artista (o valutare se rendere cliccabili anche i valori numerici)
+
+Visti i tempi, vi consiglierei di iniziare a pensare anche all'interfaccia complessiva. Per non impazzire con la riscrittura del codice, l'interfaccia potrebbe anche essere "disegnata" con Illustrator (o altro software) prima di implementarla concretamente nello sketch. Si potrebbe iniziare a pensare a una grafica e, soprattutto, a una tipografia meno anonima. Anche le gerarchie visive andrebbero riviste perché ora gli elementi più importanti sono i due tasti verde e rosso saturi. La visualizzazione vera e propria diventa importante solo quando si seleziona un artista... ma sempre un po' meno dei pulsanti. Io poi eviterei di mettere elementi secondari in alto a sinistra, il punto in cui noi occidentali iniziamo a leggere i testi e, inconsciamente, anche le immagini... ma questa è forse una considerazione, in parte, soggettiva.
+Il progetto dell'interfaccia può essere utile anche per capire cosa ci deve finire dentro, ad esempio il pulsante per l'apertura della relazione di progetto o altro.
+- TODO:
+  - Progettare l'interfaccia complessiva, anche solo come bozza grafica (es. Illustrator)
+  - Scegliere una tipografia più caratterizzante
+  - Rivedere le gerarchie visive degli elementi (es. pulsanti vs visualizzazione)
+  - Evitare di posizionare elementi secondari in alto a sinistra
+  - Definire cosa deve essere presente nell'interfaccia (es. pulsante per la relazione di progetto)
+
+Ho poi notato un ritardo, a volte anche di più secondi, nell'apparizione degli artisti correlati. Da quello che ho visto, sommariamente, nel codice, mi sembra che facciate caricare ogni volta il file JSON. Se le informazioni non cambiano così frequentemente, è meglio caricarle una sola volta in un array che occuperà più spazio in RAM ma permetterà di ottenere più velocemente le informazioni. Al limite si può prevedere un aggiornamento ogni tanto. 
+Delle ottimizzazioni sarebbe meglio occuparsi alla fine ma, sempre visti i tempi, potrebbe essere meglio iniziare a pensarci già ora.
+- TODO:
+  - Ottimizzare il caricamento dei dati: caricare i JSON una sola volta e memorizzarli in un array
+  - Prevedere un meccanismo di aggiornamento periodico dei dati se necessario
+  - Iniziare a pianificare le ottimizzazioni delle performance
+
+PS: Le scadenze per le consegne le ho segnalate poco fa sul canale Teams del corso... rimanendo un po' stupito anch'io di quanto siano ravvicinate.
