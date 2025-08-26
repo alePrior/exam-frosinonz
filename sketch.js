@@ -55,6 +55,8 @@ class Bubble {
     this.isSimilar = isSimilar;
     this.parentBubble = parentBubble;
     this.similarArtistsFetched = false; // Track if we've already fetched similar artists
+    this.isLoading = false; // Track if we're loading
+    this.loadingAngle = 0; // Track the loading angle
   }
 
   collide(other) {
@@ -138,6 +140,7 @@ class Bubble {
   }
 
   show(isHighlighted = false) {
+    // Draw the bubble fill
     noStroke();
     // Different color and opacity based on highlight state and if it's the last clicked bubble
     if (this === lastClickedBubble) {
@@ -156,6 +159,24 @@ class Bubble {
       }
     }
     ellipse(this.x, this.y, this.r * 2);
+    
+    // Draw loading animation if needed
+    if (this.isLoading) {
+      push();
+      translate(this.x, this.y);
+      noFill();
+      stroke(255);
+      strokeWeight(3);
+      strokeCap(SQUARE);
+      
+      // Draw rotating arc
+      arc(0, 0, this.r * 2 + 10, this.r * 2 + 10, 
+          this.loadingAngle, this.loadingAngle + HALF_PI);
+      
+      // Update loading angle
+      this.loadingAngle += 0.1;
+      pop();
+    }
     
     // Draw play count inside bubble
     fill(0);
@@ -564,6 +585,9 @@ function mousePressed() {
         const currentBubbles = isIsolationMode ? [bubble] : [...bubbles];
         const currentConnections = isIsolationMode ? [] : [...connections];
         
+        // Start loading animation
+        bubble.isLoading = true;
+        
         // After fetching completes, merge with existing if in cumulative mode
         fetchSimilarArtists(bubble.name, bubble).then(() => {
           if (!isIsolationMode && hasFirstClick) {
@@ -571,6 +595,8 @@ function mousePressed() {
             bubbles = [...currentBubbles, ...bubbles.filter(b => !currentBubbles.includes(b))];
             connections = [...currentConnections, ...connections];
           }
+          // Stop loading animation
+          bubble.isLoading = false;
         });
         
         bubble.similarArtistsFetched = true; // Mark as fetched
