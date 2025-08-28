@@ -378,6 +378,7 @@ class HeaderButtons {
     this.dropdownHeight = 300;
     this.dropdownWidth = 200;
     this.caretSize = 8; // Size of the caret indicator
+    this.isTagMode = getUrlParameter('tag') !== ''; // Check if we're in tag mode
   }
 
   formatCount(count) {
@@ -459,50 +460,75 @@ class HeaderButtons {
     return false;
   }
 
-  showButtons() {
-    // Tags button (first) - Red/Pink theme
-    fill(this.isHoveringTags ? '#d63384' : '#e74c3c');
-    noStroke();
-    rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
-    
-    // Tags button text
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(14);
-    textStyle(BOLD);
-    text('Top 50 tag', this.buttonWidth/2 - 10, this.buttonHeight/2);
-    
-    // Draw caret
-    const caretX = this.buttonWidth - 20;
-    const caretY = this.buttonHeight/2;
-    fill(255);
-    noStroke();
-    if (this.showTagDropdown) {
-      // Caret up
-      triangle(
-        caretX - this.caretSize/2, caretY + this.caretSize/2,
-        caretX, caretY - this.caretSize/2,
-        caretX + this.caretSize/2, caretY + this.caretSize/2
-      );
-    } else {
-      // Caret down
-      triangle(
-        caretX - this.caretSize/2, caretY - this.caretSize/2,
-        caretX, caretY + this.caretSize/2,
-        caretX + this.caretSize/2, caretY - this.caretSize/2
-      );
-    }
+    showButtons() {
+     // Tags button (first)
+     if (this.isTagMode) {
+       // Active state - white background
+       fill('#fff');
+       noStroke();
+       rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // Black text
+       fill(0);
+     } else {
+       // Inactive state - red background
+       fill(this.isHoveringTags ? color(224, 49, 66, 220) : '#e03142');
+       noStroke();
+       rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // White text
+       fill(255);
+     }
+     
+     // Tags button text
+     textAlign(CENTER, CENTER);
+     textSize(14);
+     textStyle(BOLD);
+     text('Top 50 tag', this.buttonWidth/2 - 10, this.buttonHeight/2);
+     
+     // Draw caret
+     const caretX = this.buttonWidth - 20;
+     const caretY = this.buttonHeight/2;
+     // Caret color matches text color
+     if (this.showTagDropdown) {
+       // Caret up
+       triangle(
+         caretX - this.caretSize/2, caretY + this.caretSize/2,
+         caretX, caretY - this.caretSize/2,
+         caretX + this.caretSize/2, caretY + this.caretSize/2
+       );
+     } else {
+       // Caret down
+       triangle(
+         caretX - this.caretSize/2, caretY - this.caretSize/2,
+         caretX, caretY + this.caretSize/2,
+         caretX + this.caretSize/2, caretY - this.caretSize/2
+       );
+     }
 
-    // Artists button (second) - Darker Red theme
-    const artistsButtonX = this.buttonWidth + this.buttonMargin;
-    fill(this.isHoveringArtists ? '#b02a4c' : '#c0392b');
-    rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
-    
-    // Artists button text
-    fill(255);
-    textStyle(BOLD);
-    textSize(14);
-    text('Top 50 artisti', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
+     // Artists button (second)
+     const artistsButtonX = this.buttonWidth + this.buttonMargin;
+     if (!this.isTagMode) {
+       // Active state - white background
+       fill('#fff');
+       noStroke();
+       rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // Black text
+       fill(0);
+     } else {
+       // Inactive state - red background
+       fill(this.isHoveringArtists ? color(224, 49, 66, 220) : '#e03142');
+       noStroke();
+       rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // White text
+       fill(255);
+     }
+     
+     textStyle(BOLD);
+     textSize(14);
+     text('Top 50 artisti', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
     
     // Draw status text to the right of buttons
     fill(255);
@@ -721,11 +747,10 @@ function windowResized() {
 function draw() {
   // Sync isolation mode with window variable
   window.isIsolationMode = isIsolationMode;
-  background('#1c2128');
+  background('#1c2838');
   
-  // Draw header buttons (without dropdown)
+  // Check button interactions
   headerButtons.checkButtons(mouseX, mouseY);
-  headerButtons.showButtons();
   
   // Find connected bubbles if there's a hovered bubble
   let connectedBubbles = new Set();
@@ -799,11 +824,15 @@ function draw() {
     }
   }
   
-  // Draw checkbox in bottom right (outside of translation)
+  // Draw UI elements on top of everything
+  // First the header buttons
+  headerButtons.showButtons();
+  
+  // Then the checkbox
   modeCheckbox.checkHover(mouseX, mouseY);
   modeCheckbox.show();
   
-  // Draw dropdown menu on top of everything
+  // Finally the dropdown menu
   headerButtons.showDropdown();
   
   // Update cursor for checkbox hover
