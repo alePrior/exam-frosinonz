@@ -25,11 +25,11 @@ class Connection {
     this.target = target;
   }
 
-  show() {
-    stroke(150, 150, 255, 100);
-    strokeWeight(2);
-    line(this.source.x, this.source.y, this.target.x, this.target.y);
-  }
+     show() {
+     stroke('#fff'); // White color for connections
+     strokeWeight(2);
+     line(this.source.x, this.source.y, this.target.x, this.target.y);
+   }
 }
 
 // Funzione per formattare il numero di ascolti
@@ -135,26 +135,24 @@ class Bubble {
 
 
 
-  show(isHighlighted = false) {
-    // Draw the bubble fill
-    noStroke();
-    // Different color and opacity based on highlight state and if it's the last clicked bubble
-    if (this === lastClickedBubble) {
-      fill('#ff5c58'); // Bright red for last clicked bubble
-    } else if (isHighlighted) {
-      if (this.isSimilar) {
-        fill(150, 150, 255); // Solid light blue for highlighted similar artists
-      } else {
-        fill(255, 100, 100); // Solid red for highlighted main artist
-      }
-    } else {
-      if (this.isSimilar) {
-        fill(150, 150, 255, 150); // Semi-transparent light blue for similar artists
-      } else {
-        fill(255, 150); // Semi-transparent white for main artists
-      }
-    }
-    ellipse(this.x, this.y, this.r * 2);
+    show(isHighlighted = false) {
+     push(); // Salva lo stato corrente
+     
+     // Draw the bubble fill
+     // Different color based on state (clicked, similar, or default)
+     if (this === lastClickedBubble || this.isSimilar) {
+       // Pink background with white stroke for clicked and similar artists
+       stroke(255);
+       strokeWeight(2);
+       fill('#ca329a');
+     } else {
+       // Default blue background without stroke
+       noStroke();
+       fill('#018ca9');
+     }
+     ellipse(this.x, this.y, this.r * 2);
+     
+     pop(); // Ripristina lo stato precedente (rimuove lo stroke)
     
     // Draw loading animation if needed
     if (this.isLoading) {
@@ -174,17 +172,19 @@ class Bubble {
       pop();
     }
     
-    // Draw play count inside bubble
-    fill(0);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text(formatPlayCount(parseInt(this.playcount)), this.x, this.y);
-    
-    // Draw artist name below bubble
-    fill(255); // Colore bianco per il testo
-    textAlign(CENTER, TOP);
-    textSize(14); // Dimensione fissa del font
-    text(this.name, this.x, this.y + this.r + 5); // 5 pixel di spazio tra la bolla e il testo
+     // Draw play count inside bubble
+     noStroke(); // Assicurati che non ci sia stroke per il testo
+     fill(255); // White text
+     textAlign(CENTER, CENTER);
+     textSize(11);
+     text(formatPlayCount(parseInt(this.playcount)), this.x, this.y);
+     
+     // Draw artist name below bubble
+     noStroke(); // Assicurati che non ci sia stroke per il testo
+     fill(255); // White text
+     textAlign(CENTER, TOP);
+     textSize(14);
+     text(this.name, this.x, this.y + this.r + 5);
   }
 
   showTooltip() {
