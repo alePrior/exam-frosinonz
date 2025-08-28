@@ -55,6 +55,8 @@ class Bubble {
     this.isSimilar = isSimilar;
     this.parentBubble = parentBubble;
     this.similarArtistsFetched = false; // Track if we've already fetched similar artists
+    this.isLoading = false; // Track if we're loading
+    this.loadingAngle = 0; // Track the loading angle
   }
 
   collide(other) {
@@ -138,6 +140,7 @@ class Bubble {
   }
 
   show(isHighlighted = false) {
+    // Draw the bubble fill
     noStroke();
     // Different color and opacity based on highlight state and if it's the last clicked bubble
     if (this === lastClickedBubble) {
@@ -156,6 +159,24 @@ class Bubble {
       }
     }
     ellipse(this.x, this.y, this.r * 2);
+    
+    // Draw loading animation if needed
+    if (this.isLoading) {
+      push();
+      translate(this.x, this.y);
+      noFill();
+      stroke(255);
+      strokeWeight(3);
+      strokeCap(SQUARE);
+      
+      // Draw rotating arc
+      arc(0, 0, this.r * 2 + 10, this.r * 2 + 10, 
+          this.loadingAngle, this.loadingAngle + HALF_PI);
+      
+      // Update loading angle
+      this.loadingAngle += 0.1;
+      pop();
+    }
     
     // Draw play count inside bubble
     fill(0);
@@ -355,9 +376,8 @@ class SideMenu {
     this.padding = 20;
     this.buttonHeight = 40;
     this.buttonMargin = 10;
-    this.isHoveringMode = false;
     this.isHoveringReset = false;
-    this.tableTop = this.padding * 2 + this.buttonHeight * 2 + this.buttonMargin;
+    this.tableTop = this.padding * 2 + this.buttonHeight + this.buttonMargin;
     this.rowHeight = 30;
     this.hoveredTagIndex = -1;  // Track which tag is being hovered
   }
@@ -367,15 +387,8 @@ class SideMenu {
   }
 
   checkButtons(px, py) {
-    // Mode button bounds
-    const modeButtonY = this.padding;
-    this.isHoveringMode = px >= this.padding && 
-                         px <= this.width - this.padding &&
-                         py >= modeButtonY && 
-                         py <= modeButtonY + this.buttonHeight;
-
     // Reset button bounds
-    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
+    const resetButtonY = this.padding;
     this.isHoveringReset = px >= this.padding && 
                           px <= this.width - this.padding &&
                           py >= resetButtonY && 
@@ -396,14 +409,11 @@ class SideMenu {
       }
     }
 
-    return this.isHoveringMode || this.isHoveringReset;
+    return this.isHoveringReset;
   }
 
   handleClick(px, py) {
-    if (this.isHoveringMode) {
-      isIsolationMode = !isIsolationMode;
-      return true;
-    } else if (this.isHoveringReset) {
+    if (this.isHoveringReset) {
       // Reset the application state
       bubbles = [];
       connections = [];
@@ -426,27 +436,16 @@ class SideMenu {
     fill('#333333');
     rect(0, 0, this.width, height);
 
-    // Mode toggle button
-    const modeButtonY = this.padding;
-    fill(this.isHoveringMode ? '#45a049' : '#4CAF50');
-    rect(this.padding, modeButtonY, 
-         this.width - this.padding * 2, this.buttonHeight, 4);
-    
-    // Mode button text
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(16);
-    text('Modalità: ' + (isIsolationMode ? 'Isolamento' : 'Cumulativa'),
-         this.width / 2, modeButtonY + this.buttonHeight / 2);
-
     // Reset button
-    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
+    const resetButtonY = this.padding;
     fill(this.isHoveringReset ? '#d44937' : '#e74c3c');
     rect(this.padding, resetButtonY, 
          this.width - this.padding * 2, this.buttonHeight, 4);
     
     // Reset button text
     fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(16);
     text('Mostra Artisti Top',
          this.width / 2, resetButtonY + this.buttonHeight / 2);
 
@@ -509,14 +508,89 @@ class SideMenu {
   }
 }
 
+class ModeCheckbox {
+  constructor() {
+    this.size = 20;
+    this.padding = 15;
+    this.isHovered = false;
+    this.labelText = "apertura multipla";
+  }
+
+  getPosition() {
+    return {
+      x: windowWidth - this.padding - this.size - textWidth(this.labelText) - 10,
+      y: windowHeight - this.padding - this.size
+    };
+  }
+
+  contains(px, py) {
+    const pos = this.getPosition();
+    const totalWidth = this.size + 10 + textWidth(this.labelText);
+    return px >= pos.x && px <= pos.x + totalWidth &&
+           py >= pos.y && py <= pos.y + this.size;
+  }
+
+  checkHover(px, py) {
+    this.isHovered = this.contains(px, py);
+    return this.isHovered;
+  }
+
+  handleClick(px, py) {
+    if (this.contains(px, py)) {
+      isIsolationMode = !isIsolationMode;
+      return true;
+    }
+    return false;
+  }
+
+  show() {
+    const pos = this.getPosition();
+    
+    // Draw checkbox background
+    fill(255);
+    stroke(150);
+    strokeWeight(2);
+    rect(pos.x, pos.y, this.size, this.size, 3);
+    
+    // Draw checkmark if in cumulative mode (not isolation mode)
+    if (!isIsolationMode) {
+      noFill();
+      stroke(50, 150, 50);
+      strokeWeight(3);
+      strokeCap(ROUND);
+      // Draw checkmark
+      line(pos.x + 4, pos.y + this.size/2, 
+           pos.x + this.size/2, pos.y + this.size - 4);
+      line(pos.x + this.size/2, pos.y + this.size - 4, 
+           pos.x + this.size - 4, pos.y + 4);
+    }
+    
+    // Draw label
+    fill(255);
+    noStroke();
+    textAlign(LEFT, CENTER);
+    textSize(14);
+    text(this.labelText, pos.x + this.size + 10, pos.y + this.size/2);
+    
+    // Show hover effect
+    if (this.isHovered) {
+      fill(255, 255, 255, 50);
+      noStroke();
+      rect(pos.x - 5, pos.y - 5, this.size + 10 + textWidth(this.labelText) + 10, this.size + 10, 5);
+    }
+  }
+}
+
 let sideMenu;
+let modeCheckbox;
 let currentViewTitle = "Top artisti ascoltati";
 
 function setup() {
   // Create canvas the size of the viewport minus the menu width
   createCanvas(windowWidth, windowHeight);
-  // Initialize menu
+  // Initialize menu and checkbox
   sideMenu = new SideMenu();
+  modeCheckbox = new ModeCheckbox();
   // Calculate effective width
   effectiveWidth = windowWidth - sideMenu.width;
   // Initialize window variable for communication with HTML
@@ -527,7 +601,12 @@ function setup() {
 }
 
 function mousePressed() {
-  // First check if we clicked on the menu
+  // First check if we clicked on the checkbox
+  if (modeCheckbox.handleClick(mouseX, mouseY)) {
+    return; // Click was handled by checkbox
+  }
+  
+  // Then check if we clicked on the menu
   if (sideMenu.contains(mouseX, mouseY)) {
     if (sideMenu.handleClick(mouseX, mouseY)) {
       return; // Click was handled by menu
@@ -564,6 +643,9 @@ function mousePressed() {
         const currentBubbles = isIsolationMode ? [bubble] : [...bubbles];
         const currentConnections = isIsolationMode ? [] : [...connections];
         
+        // Start loading animation
+        bubble.isLoading = true;
+        
         // After fetching completes, merge with existing if in cumulative mode
         fetchSimilarArtists(bubble.name, bubble).then(() => {
           if (!isIsolationMode && hasFirstClick) {
@@ -571,6 +653,8 @@ function mousePressed() {
             bubbles = [...currentBubbles, ...bubbles.filter(b => !currentBubbles.includes(b))];
             connections = [...currentConnections, ...connections];
           }
+          // Stop loading animation
+          bubble.isLoading = false;
         });
         
         bubble.similarArtistsFetched = true; // Mark as fetched
@@ -690,4 +774,13 @@ function draw() {
   
   // End translation for main content
   pop();
+  
+  // Draw checkbox in bottom right (outside of translation)
+  modeCheckbox.checkHover(mouseX, mouseY);
+  modeCheckbox.show();
+  
+  // Update cursor for checkbox hover
+  if (modeCheckbox.isHovered && !hoveredBubble) {
+    cursor(HAND);
+  }
 }
