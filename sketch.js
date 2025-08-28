@@ -368,16 +368,16 @@ function createBubbles() {
 
 class HeaderButtons {
   constructor() {
-    this.padding = 20;
-    this.buttonHeight = 40;
-    this.buttonWidth = 150;
-    this.buttonMargin = 10;
+    this.buttonHeight = 50; // Height of buttons
+    this.buttonWidth = 200; // Width of buttons
+    this.buttonMargin = 0; // No margin from viewport edge
     this.isHoveringArtists = false;
     this.isHoveringTags = false;
     this.showTagDropdown = false;
     this.hoveredTagIndex = -1;
     this.dropdownHeight = 300;
     this.dropdownWidth = 200;
+    this.caretSize = 8; // Size of the caret indicator
   }
 
   formatCount(count) {
@@ -390,24 +390,27 @@ class HeaderButtons {
   }
 
   checkButtons(px, py) {
-    // Artists button bounds
-    this.isHoveringArtists = px >= this.padding && 
-                            px <= this.padding + this.buttonWidth &&
-                            py >= this.padding && 
-                            py <= this.padding + this.buttonHeight;
+    // Tags button bounds (first button)
+    this.isHoveringTags = px >= 0 && 
+                         px <= this.buttonWidth &&
+                         py >= 0 && 
+                         py <= this.buttonHeight;
 
-    // Tags button bounds
-    const tagsButtonX = this.padding + this.buttonWidth + this.buttonMargin;
-    this.isHoveringTags = px >= tagsButtonX && 
-                         px <= tagsButtonX + this.buttonWidth &&
-                         py >= this.padding && 
-                         py <= this.padding + this.buttonHeight;
+    // Artists button bounds (second button)
+    const artistsButtonX = this.buttonWidth + this.buttonMargin;
+    this.isHoveringArtists = px >= artistsButtonX && 
+                            px <= artistsButtonX + this.buttonWidth &&
+                            py >= 0 && 
+                            py <= this.buttonHeight;
 
     // Check dropdown hovering
     this.hoveredTagIndex = -1;
     if (this.showTagDropdown && topTags.length > 0) {
-      const dropdownX = tagsButtonX;
-      const dropdownY = this.padding + this.buttonHeight + 5;
+      const dropdownX = 0;
+      const dropdownY = this.buttonHeight + 5;
+      
+      // Aggiorno la larghezza del dropdown per corrispondere al pulsante
+      this.dropdownWidth = this.buttonWidth;
       
       if (px >= dropdownX && px <= dropdownX + this.dropdownWidth &&
           py >= dropdownY && py <= dropdownY + this.dropdownHeight) {
@@ -456,35 +459,74 @@ class HeaderButtons {
     return false;
   }
 
-  show() {
-    // Artists button
-    fill(this.isHoveringArtists ? '#45a049' : '#4CAF50');
+  showButtons() {
+    // Tags button (first) - Red/Pink theme
+    fill(this.isHoveringTags ? '#d63384' : '#e74c3c');
     noStroke();
-    rect(this.padding, this.padding, this.buttonWidth, this.buttonHeight, 5);
+    rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
     
+    // Tags button text
     fill(255);
     textAlign(CENTER, CENTER);
     textSize(14);
-    text('Top 50 artisti', this.padding + this.buttonWidth/2, this.padding + this.buttonHeight/2);
-
-    // Tags button
-    const tagsButtonX = this.padding + this.buttonWidth + this.buttonMargin;
-    fill(this.isHoveringTags ? '#357abd' : '#2196F3');
-    rect(tagsButtonX, this.padding, this.buttonWidth, this.buttonHeight, 5);
+    textStyle(BOLD);
+    text('Top 50 tag', this.buttonWidth/2 - 10, this.buttonHeight/2);
     
+    // Draw caret
+    const caretX = this.buttonWidth - 20;
+    const caretY = this.buttonHeight/2;
     fill(255);
-    text('Top 50 tag', tagsButtonX + this.buttonWidth/2, this.padding + this.buttonHeight/2);
+    noStroke();
+    if (this.showTagDropdown) {
+      // Caret up
+      triangle(
+        caretX - this.caretSize/2, caretY + this.caretSize/2,
+        caretX, caretY - this.caretSize/2,
+        caretX + this.caretSize/2, caretY + this.caretSize/2
+      );
+    } else {
+      // Caret down
+      triangle(
+        caretX - this.caretSize/2, caretY - this.caretSize/2,
+        caretX, caretY + this.caretSize/2,
+        caretX + this.caretSize/2, caretY - this.caretSize/2
+      );
+    }
 
-    // Draw dropdown if visible
+    // Artists button (second) - Darker Red theme
+    const artistsButtonX = this.buttonWidth + this.buttonMargin;
+    fill(this.isHoveringArtists ? '#b02a4c' : '#c0392b');
+    rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
+    
+    // Artists button text
+    fill(255);
+    textStyle(BOLD);
+    textSize(14);
+    text('Top 50 artisti', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
+    
+    // Draw status text to the right of buttons
+    fill(255);
+    textAlign(LEFT, CENTER);
+    textSize(24);
+    textStyle(BOLD);
+    text(currentViewTitle, artistsButtonX + this.buttonWidth + 20, this.buttonHeight/2);
+  }
+
+  showDropdown() {
     if (this.showTagDropdown && topTags.length > 0) {
-      const dropdownX = tagsButtonX;
-      const dropdownY = this.padding + this.buttonHeight + 5;
+      const dropdownX = 0;
+      const dropdownY = this.buttonHeight + 5;
+      
+      // Dropdown shadow
+      fill(0, 0, 0, 30);
+      noStroke();
+      rect(dropdownX + 3, dropdownY + 3, this.dropdownWidth, this.dropdownHeight, 0);
       
       // Dropdown background
       fill(255, 250);
-      stroke(200);
+      stroke(220);
       strokeWeight(1);
-      rect(dropdownX, dropdownY, this.dropdownWidth, this.dropdownHeight, 5);
+      rect(dropdownX, dropdownY, this.dropdownWidth, this.dropdownHeight, 0);
       
       // Dropdown items
       const maxItems = Math.min(Math.floor(this.dropdownHeight / 25), topTags.length);
@@ -494,19 +536,22 @@ class HeaderButtons {
         
         // Highlight hovered item
         if (i === this.hoveredTagIndex) {
-          fill(100, 150, 255, 100);
+          fill(231, 76, 60, 100);
           noStroke();
-          rect(dropdownX + 5, itemY - 10, this.dropdownWidth - 10, 25, 3);
+          rect(dropdownX, itemY - 10, this.dropdownWidth, 25);
         }
         
         // Tag name
-        fill(0);
+        fill(50);
         textAlign(LEFT, CENTER);
         textSize(12);
+        textStyle(NORMAL);
         text(tag.name, dropdownX + 10, itemY);
         
         // Count
         textAlign(RIGHT, CENTER);
+        textStyle(BOLD);
+        fill(120);
         text(this.formatCount(parseInt(tag.count)), dropdownX + this.dropdownWidth - 10, itemY);
       }
     }
@@ -593,6 +638,8 @@ let currentViewTitle = "Top artisti ascoltati";
 function setup() {
   // Create canvas the full size of the viewport
   createCanvas(windowWidth, windowHeight);
+  // Set font to Titillium Web
+  textFont('Titillium Web');
   // Initialize header buttons and checkbox
   headerButtons = new HeaderButtons();
   modeCheckbox = new ModeCheckbox();
@@ -676,15 +723,9 @@ function draw() {
   window.isIsolationMode = isIsolationMode;
   background('#1c2128');
   
-  // Draw header buttons
+  // Draw header buttons (without dropdown)
   headerButtons.checkButtons(mouseX, mouseY);
-  headerButtons.show();
-  
-  // Draw title
-  fill(255);
-  textAlign(LEFT, TOP);
-  textSize(24);
-  text(currentViewTitle, 20, 90);
+  headerButtons.showButtons();
   
   // Find connected bubbles if there's a hovered bubble
   let connectedBubbles = new Set();
@@ -761,6 +802,9 @@ function draw() {
   // Draw checkbox in bottom right (outside of translation)
   modeCheckbox.checkHover(mouseX, mouseY);
   modeCheckbox.show();
+  
+  // Draw dropdown menu on top of everything
+  headerButtons.showDropdown();
   
   // Update cursor for checkbox hover
   if (modeCheckbox.isHovered && !hoveredBubble) {
