@@ -136,10 +136,16 @@ class Bubble {
 
 
 
-    show(isHighlighted = false) {
-     push(); // Salva lo stato corrente
-     
-           if (this.isClicked) {
+         show(isHighlighted = false) {
+      push(); // Salva lo stato corrente
+      
+      // Aggiungiamo l'effetto ombra
+      drawingContext.shadowBlur = 15;
+      drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      drawingContext.shadowOffsetX = 5;
+      drawingContext.shadowOffsetY = 5;
+      
+      if (this.isClicked) {
         // Gradient per tutti gli artisti che sono stati cliccati
         stroke(255);
         strokeWeight(2);
@@ -168,9 +174,14 @@ class Bubble {
        drawingContext.fillStyle = gradient;
      }
      
-     ellipse(this.x, this.y, this.r * 2);
-     
-     pop(); // Ripristina lo stato precedente
+           ellipse(this.x, this.y, this.r * 2);
+      
+      // Rimuoviamo l'ombra per il resto degli elementi
+      drawingContext.shadowBlur = 0;
+      drawingContext.shadowOffsetX = 0;
+      drawingContext.shadowOffsetY = 0;
+      
+      pop(); // Ripristina lo stato precedente
     
     // Draw loading animation if needed
     if (this.isLoading) {
