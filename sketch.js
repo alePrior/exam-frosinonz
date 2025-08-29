@@ -688,7 +688,7 @@ class ModeButton {
     this.height = 50;
     this.margin = 0;
     this.isHovered = false;
-    this.labelText = "Modalità accumulativa";
+    this.labelText = "Apertura multipla";
   }
 
   getPosition() {
