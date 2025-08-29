@@ -18,7 +18,6 @@ let lastClickedBubble = null;
 let connections = [];
 let isIsolationMode = true; // true = isolation mode (default), false = cumulative mode
 let hasFirstClick = false;
-let effectiveWidth; // width available for bubbles (windowWidth - menuWidth)
 
 class Connection {
   constructor(source, target) {
@@ -26,11 +25,11 @@ class Connection {
     this.target = target;
   }
 
-  show() {
-    stroke(150, 150, 255, 100);
-    strokeWeight(2);
-    line(this.source.x, this.source.y, this.target.x, this.target.y);
-  }
+     show() {
+     stroke('#fff'); // White color for connections
+     strokeWeight(2);
+     line(this.source.x, this.source.y, this.target.x, this.target.y);
+   }
 }
 
 // Funzione per formattare il numero di ascolti
@@ -54,7 +53,10 @@ class Bubble {
     this.vy = random(-1, 1);
     this.isSimilar = isSimilar;
     this.parentBubble = parentBubble;
-    this.similarArtistsFetched = false; // Track if we've already fetched similar artists
+         this.similarArtistsFetched = false; // Track if we've already fetched similar artists
+     this.isLoading = false; // Track if we're loading
+     this.loadingAngle = 0; // Track the loading angle
+     this.isClicked = false; // Track if this bubble has been clicked
   }
 
   collide(other) {
@@ -75,6 +77,45 @@ class Bubble {
       this.vy -= ay;
       other.vx += ax;
       other.vy += ay;
+    }
+  }
+
+  checkButtonCollision() {
+    // Check collision with header buttons
+    const headerButtonHeight = 50;
+    if (this.y - this.r < headerButtonHeight) {
+      this.y = headerButtonHeight + this.r;
+      this.vy *= -0.8;
+    }
+
+    // Check collision with mode button
+    const modeBtn = modeButton.getPosition();
+    const modeBtnWidth = modeButton.width;
+    const modeBtnHeight = modeButton.height;
+
+    // Calculate the closest point on the button to the circle
+    const closestX = constrain(this.x, modeBtn.x, modeBtn.x + modeBtnWidth);
+    const closestY = constrain(this.y, modeBtn.y, modeBtn.y + modeBtnHeight);
+
+    // Calculate the distance between the circle's center and the closest point
+    const distanceX = this.x - closestX;
+    const distanceY = this.y - closestY;
+    const distance = sqrt(distanceX * distanceX + distanceY * distanceY);
+
+    // If the distance is less than the circle's radius, there is a collision
+    if (distance < this.r) {
+      // Calculate the normal vector
+      const nx = distanceX / distance;
+      const ny = distanceY / distance;
+
+      // Move the circle out of the button
+      this.x = closestX + nx * this.r;
+      this.y = closestY + ny * this.r;
+
+      // Reflect the velocity vector
+      const dotProduct = this.vx * nx + this.vy * ny;
+      this.vx = (this.vx - 2 * dotProduct * nx) * 0.8;
+      this.vy = (this.vy - 2 * dotProduct * ny) * 0.8;
     }
   }
 
@@ -106,7 +147,7 @@ class Bubble {
       this.y += this.vy;
 
       // Bounce off walls
-      if (this.x - this.r < 0 || this.x + this.r > effectiveWidth) {
+      if (this.x - this.r < 0 || this.x + this.r > width) {
         this.vx *= -0.8;
       }
       if (this.y - this.r < 0 || this.y + this.r > height) {
@@ -114,8 +155,11 @@ class Bubble {
       }
 
       // Keep inside canvas
-      this.x = constrain(this.x, this.r, effectiveWidth - this.r);
+      this.x = constrain(this.x, this.r, width - this.r);
       this.y = constrain(this.y, this.r, height - this.r);
+
+      // Check collision with buttons
+      this.checkButtonCollision();
 
       // Add gentle friction
       this.vx *= 0.995;
@@ -132,42 +176,86 @@ class Bubble {
     return d < this.r;
   }
 
-  containsWithOffset(px, py, offsetX) {
-    let d = dist(px - offsetX, py, this.x, this.y);
-    return d < this.r;
-  }
 
-  show(isHighlighted = false) {
-    noStroke();
-    // Different color and opacity based on highlight state and if it's the last clicked bubble
-    if (this === lastClickedBubble) {
-      fill('#ff5c58'); // Bright red for last clicked bubble
-    } else if (isHighlighted) {
-      if (this.isSimilar) {
-        fill(150, 150, 255); // Solid light blue for highlighted similar artists
-      } else {
-        fill(255, 100, 100); // Solid red for highlighted main artist
-      }
-    } else {
-      if (this.isSimilar) {
-        fill(150, 150, 255, 150); // Semi-transparent light blue for similar artists
-      } else {
-        fill(255, 150); // Semi-transparent white for main artists
-      }
+
+         show(isHighlighted = false) {
+      push(); // Salva lo stato corrente
+      
+      // Aggiungiamo l'effetto ombra
+      drawingContext.shadowBlur = 15;
+      drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      drawingContext.shadowOffsetX = 5;
+      drawingContext.shadowOffsetY = 5;
+      
+      if (this.isClicked) {
+        // Gradient per tutti gli artisti che sono stati cliccati
+        stroke(255);
+        strokeWeight(2);
+        const gradient = drawingContext.createLinearGradient(
+          this.x, this.y - this.r,     // Punto di inizio (alto)
+          this.x, this.y + this.r      // Punto di fine (basso)
+        );
+        
+        // Aggiungiamo i colori del gradiente viola-rosa
+        gradient.addColorStop(0, '#D48CC8');    // Rosa chiaro in alto
+        gradient.addColorStop(1, '#7B1B7A');    // Viola scuro in basso
+        
+        drawingContext.fillStyle = gradient;
+     } else {
+       // Creiamo il gradiente per le bolle normali
+       noStroke();
+       const gradient = drawingContext.createLinearGradient(
+         this.x, this.y - this.r,     // Punto di inizio (alto)
+         this.x, this.y + this.r      // Punto di fine (basso)
+       );
+       
+       // Aggiungiamo i colori del gradiente
+       gradient.addColorStop(0, '#4ADBB2');    // Verde acqua in alto
+       gradient.addColorStop(1, '#1E8B99');    // Blu più scuro in basso
+       
+       drawingContext.fillStyle = gradient;
+     }
+     
+           ellipse(this.x, this.y, this.r * 2);
+      
+      // Rimuoviamo l'ombra per il resto degli elementi
+      drawingContext.shadowBlur = 0;
+      drawingContext.shadowOffsetX = 0;
+      drawingContext.shadowOffsetY = 0;
+      
+      pop(); // Ripristina lo stato precedente
+    
+    // Draw loading animation if needed
+    if (this.isLoading) {
+      push();
+      translate(this.x, this.y);
+      noFill();
+      stroke(255);
+      strokeWeight(3);
+      strokeCap(SQUARE);
+      
+      // Draw rotating arc
+      arc(0, 0, this.r * 2 + 10, this.r * 2 + 10, 
+          this.loadingAngle, this.loadingAngle + HALF_PI);
+      
+      // Update loading angle
+      this.loadingAngle += 0.1;
+      pop();
     }
-    ellipse(this.x, this.y, this.r * 2);
     
-    // Draw play count inside bubble
-    fill(0);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text(formatPlayCount(parseInt(this.playcount)), this.x, this.y);
-    
-    // Draw artist name below bubble
-    fill(255); // Colore bianco per il testo
-    textAlign(CENTER, TOP);
-    textSize(14); // Dimensione fissa del font
-    text(this.name, this.x, this.y + this.r + 5); // 5 pixel di spazio tra la bolla e il testo
+     // Draw play count inside bubble
+     noStroke(); // Assicurati che non ci sia stroke per il testo
+     fill(255); // White text
+     textAlign(CENTER, CENTER);
+     textSize(11);
+     text(formatPlayCount(parseInt(this.playcount)), this.x, this.y);
+     
+     // Draw artist name below bubble
+     noStroke(); // Assicurati che non ci sia stroke per il testo
+     fill(255); // White text
+     textAlign(CENTER, TOP);
+     textSize(14);
+     text(this.name, this.x, this.y + this.r + 5);
   }
 
   showTooltip() {
@@ -243,16 +331,31 @@ async function fetchSimilarArtists(artistName, parentBubble) {
         // Check if this artist already exists
         const existingBubble = bubbles.find(b => b.name === artist.name);
         
-        if (existingBubble) {
-          // If already exists, just create a connection if not already connected
-          const connectionExists = connections.some(
-            c => (c.source === parentBubble && c.target === existingBubble) ||
-                 (c.source === existingBubble && c.target === parentBubble)
-          );
-          if (!connectionExists) {
-            connections.push(new Connection(parentBubble, existingBubble));
-          }
-        } else {
+                 if (existingBubble) {
+           // Se l'artista esiste già
+           // Prima creiamo la connessione con l'artista parent se non esiste
+           const connectionWithParentExists = connections.some(
+             c => (c.source === parentBubble && c.target === existingBubble) ||
+                  (c.source === existingBubble && c.target === parentBubble)
+           );
+           if (!connectionWithParentExists) {
+             connections.push(new Connection(parentBubble, existingBubble));
+           }
+
+           // Poi controlliamo le connessioni con gli altri artisti simili di questo gruppo
+           similarArtistsInfo.forEach(otherArtist => {
+             const otherBubble = bubbles.find(b => b.name === otherArtist.name);
+             if (otherBubble && otherBubble !== existingBubble) {
+               const connectionExists = connections.some(
+                 c => (c.source === existingBubble && c.target === otherBubble) ||
+                      (c.source === otherBubble && c.target === existingBubble)
+               );
+               if (!connectionExists) {
+                 connections.push(new Connection(existingBubble, otherBubble));
+               }
+             }
+           });
+         } else {
           // Create new bubble if doesn't exist
           const radius = map(artist.playcount, 0, maxPlaycount, 20, 60);
           const angle = random(TWO_PI);
@@ -343,182 +446,307 @@ function createBubbles() {
   // Create bubbles for each artist
   artists.forEach(artist => {
     const radius = map(parseInt(artist.playcount), 0, maxPlaycount, 20, 80);
-    const x = random(radius, effectiveWidth - radius);
+    const x = random(radius, width - radius);
     const y = random(radius, height - radius);
     bubbles.push(new Bubble(x, y, radius, artist.name, artist.playcount));
   });
 }
 
-class SideMenu {
+class HeaderButtons {
   constructor() {
-    this.width = 300;  // Increased width to accommodate the table
-    this.padding = 20;
-    this.buttonHeight = 40;
-    this.buttonMargin = 10;
-    this.isHoveringMode = false;
-    this.isHoveringReset = false;
-    this.tableTop = this.padding * 2 + this.buttonHeight * 2 + this.buttonMargin;
-    this.rowHeight = 30;
-    this.hoveredTagIndex = -1;  // Track which tag is being hovered
+    this.buttonHeight = 50; // Height of buttons
+    this.buttonWidth = 200; // Width of buttons
+    this.buttonMargin = 0; // No margin from viewport edge
+    this.isHoveringArtists = false;
+    this.isHoveringTags = false;
+    this.showTagDropdown = false;
+    this.hoveredTagIndex = -1;
+    this.dropdownHeight = 300;
+    this.dropdownWidth = 200;
+    this.caretSize = 8; // Size of the caret indicator
+    this.isTagMode = getUrlParameter('tag') !== ''; // Check if we're in tag mode
   }
 
-  contains(px, py) {
-    return px >= 0 && px <= this.width && py >= 0 && py <= height;
+  formatCount(count) {
+    if (count >= 1000000) {
+      return Math.round(count / 1000000) + 'M';
+    } else if (count >= 1000) {
+      return Math.round(count / 1000) + 'K';
+    }
+    return count.toString();
   }
 
   checkButtons(px, py) {
-    // Mode button bounds
-    const modeButtonY = this.padding;
-    this.isHoveringMode = px >= this.padding && 
-                         px <= this.width - this.padding &&
-                         py >= modeButtonY && 
-                         py <= modeButtonY + this.buttonHeight;
+    // Tags button bounds (first button)
+    this.isHoveringTags = px >= 0 && 
+                         px <= this.buttonWidth &&
+                         py >= 0 && 
+                         py <= this.buttonHeight;
 
-    // Reset button bounds
-    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
-    this.isHoveringReset = px >= this.padding && 
-                          px <= this.width - this.padding &&
-                          py >= resetButtonY && 
-                          py <= resetButtonY + this.buttonHeight;
+    // Artists button bounds (second button)
+    const artistsButtonX = this.buttonWidth + this.buttonMargin;
+    this.isHoveringArtists = px >= artistsButtonX && 
+                            px <= artistsButtonX + this.buttonWidth &&
+                            py >= 0 && 
+                            py <= this.buttonHeight;
 
-    // Check tag hovering
+    // Check dropdown hovering
     this.hoveredTagIndex = -1;
-    if (topTags.length > 0 && 
-        px >= this.padding && 
-        px <= this.width - this.padding - 160) {  // Only the tag name area is clickable
-      const relativeY = py - this.tableTop - this.rowHeight;
-      if (relativeY >= 0) {
-        const index = Math.floor(relativeY / this.rowHeight);
-        if (index >= 0 && index < Math.min(20, topTags.length)) {
-          this.hoveredTagIndex = index;
-          return true;
+    if (this.showTagDropdown && topTags.length > 0) {
+      const dropdownX = 0;
+      const dropdownY = this.buttonHeight + 5;
+      
+      // Aggiorno la larghezza del dropdown per corrispondere al pulsante
+      this.dropdownWidth = this.buttonWidth;
+      
+      if (px >= dropdownX && px <= dropdownX + this.dropdownWidth &&
+          py >= dropdownY && py <= dropdownY + this.dropdownHeight) {
+        const relativeY = py - dropdownY - 10;
+        if (relativeY >= 0) {
+          const index = Math.floor(relativeY / 25);
+          if (index >= 0 && index < Math.min(Math.floor(this.dropdownHeight / 25), topTags.length)) {
+            this.hoveredTagIndex = index;
+            return true;
+          }
         }
       }
     }
 
-    return this.isHoveringMode || this.isHoveringReset;
+    return this.isHoveringArtists || this.isHoveringTags;
   }
 
   handleClick(px, py) {
-    if (this.isHoveringMode) {
-      isIsolationMode = !isIsolationMode;
-      return true;
-    } else if (this.isHoveringReset) {
-      // Reset the application state
+    if (this.isHoveringArtists) {
+      // Reset to show top artists
       bubbles = [];
       connections = [];
       hasFirstClick = false;
       lastClickedBubble = null;
+      this.showTagDropdown = false;
       window.location.href = window.location.pathname; // Remove query parameters
       return true;
-    } else if (this.hoveredTagIndex >= 0 && this.hoveredTagIndex < topTags.length) {
+    } else if (this.isHoveringTags) {
+      // Toggle tag dropdown
+      this.showTagDropdown = !this.showTagDropdown;
+      return true;
+    } else if (this.showTagDropdown && this.hoveredTagIndex >= 0 && this.hoveredTagIndex < topTags.length) {
       // Handle tag click
       const tag = topTags[this.hoveredTagIndex];
+      this.showTagDropdown = false;
       window.location.href = `${window.location.pathname}?tag=${encodeURIComponent(tag.name)}`;
+      return true;
+    }
+    
+    // Close dropdown if clicking outside
+    if (this.showTagDropdown) {
+      this.showTagDropdown = false;
+      return true;
+    }
+    
+    return false;
+  }
+
+    showButtons() {
+     // Tags button (first)
+     if (this.isTagMode) {
+       // Active state - white background
+       fill('#fff');
+       noStroke();
+       rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // Black text
+       fill(0);
+     } else {
+       // Inactive state - red background
+       fill(this.isHoveringTags ? color(224, 49, 66, 220) : '#e03142');
+       noStroke();
+       rect(0, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // White text
+       fill(255);
+     }
+     
+     // Tags button text
+     textAlign(CENTER, CENTER);
+     textSize(14);
+     textStyle(BOLD);
+     text('Top 50 tag', this.buttonWidth/2 - 10, this.buttonHeight/2);
+     
+     // Draw caret
+     const caretX = this.buttonWidth - 20;
+     const caretY = this.buttonHeight/2;
+     // Caret color matches text color
+     if (this.showTagDropdown) {
+       // Caret up
+       triangle(
+         caretX - this.caretSize/2, caretY + this.caretSize/2,
+         caretX, caretY - this.caretSize/2,
+         caretX + this.caretSize/2, caretY + this.caretSize/2
+       );
+     } else {
+       // Caret down
+       triangle(
+         caretX - this.caretSize/2, caretY - this.caretSize/2,
+         caretX, caretY + this.caretSize/2,
+         caretX + this.caretSize/2, caretY - this.caretSize/2
+       );
+     }
+
+     // Artists button (second)
+     const artistsButtonX = this.buttonWidth + this.buttonMargin;
+     if (!this.isTagMode) {
+       // Active state - white background
+       fill('#fff');
+       noStroke();
+       rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // Black text
+       fill(0);
+     } else {
+       // Inactive state - red background
+       fill(this.isHoveringArtists ? color(224, 49, 66, 220) : '#e03142');
+       noStroke();
+       rect(artistsButtonX, 0, this.buttonWidth, this.buttonHeight, 0);
+       
+       // White text
+       fill(255);
+     }
+     
+     textStyle(BOLD);
+     textSize(14);
+     text('Top 50 artisti', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
+    
+    // Draw status text to the right of buttons
+    fill(255);
+    textAlign(LEFT, CENTER);
+    textSize(24);
+    textStyle(BOLD);
+    text(currentViewTitle, artistsButtonX + this.buttonWidth + 20, this.buttonHeight/2);
+  }
+
+  showDropdown() {
+    if (this.showTagDropdown && topTags.length > 0) {
+      const dropdownX = 0;
+      const dropdownY = this.buttonHeight + 5;
+      
+      // Dropdown shadow
+      fill(0, 0, 0, 30);
+      noStroke();
+      rect(dropdownX + 3, dropdownY + 3, this.dropdownWidth, this.dropdownHeight, 0);
+      
+      // Dropdown background
+      fill(255, 250);
+      stroke(220);
+      strokeWeight(1);
+      rect(dropdownX, dropdownY, this.dropdownWidth, this.dropdownHeight, 0);
+      
+      // Dropdown items
+      const maxItems = Math.min(Math.floor(this.dropdownHeight / 25), topTags.length);
+      for (let i = 0; i < maxItems; i++) {
+        const tag = topTags[i];
+        const itemY = dropdownY + 10 + i * 25;
+        
+        // Highlight hovered item
+        if (i === this.hoveredTagIndex) {
+          fill(231, 76, 60, 100);
+          noStroke();
+          rect(dropdownX, itemY - 10, this.dropdownWidth, 25);
+        }
+        
+        // Tag name
+        fill(50);
+        textAlign(LEFT, CENTER);
+        textSize(12);
+        textStyle(NORMAL);
+        text(tag.name, dropdownX + 10, itemY);
+        
+        // Count
+        textAlign(RIGHT, CENTER);
+        textStyle(BOLD);
+        fill(120);
+        text(this.formatCount(parseInt(tag.count)), dropdownX + this.dropdownWidth - 10, itemY);
+      }
+    }
+  }
+}
+
+class ModeButton {
+  constructor() {
+    this.width = 200;
+    this.height = 50;
+    this.margin = 0;
+    this.isHovered = false;
+    this.labelText = "Modalità accumulativa";
+  }
+
+  getPosition() {
+    return {
+      x: windowWidth - this.width - this.margin,
+      y: windowHeight - this.height - this.margin
+    };
+  }
+
+  contains(px, py) {
+    const pos = this.getPosition();
+    return px >= pos.x && px <= pos.x + this.width &&
+           py >= pos.y && py <= pos.y + this.height;
+  }
+
+  checkHover(px, py) {
+    this.isHovered = this.contains(px, py);
+    return this.isHovered;
+  }
+
+  handleClick(px, py) {
+    if (this.contains(px, py)) {
+      isIsolationMode = !isIsolationMode;
       return true;
     }
     return false;
   }
 
   show() {
-    // Draw menu background
-    noStroke();
-    fill('#333333');
-    rect(0, 0, this.width, height);
-
-    // Mode toggle button
-    const modeButtonY = this.padding;
-    fill(this.isHoveringMode ? '#45a049' : '#4CAF50');
-    rect(this.padding, modeButtonY, 
-         this.width - this.padding * 2, this.buttonHeight, 4);
+    const pos = this.getPosition();
     
-    // Mode button text
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(16);
-    text('Modalità: ' + (isIsolationMode ? 'Isolamento' : 'Cumulativa'),
-         this.width / 2, modeButtonY + this.buttonHeight / 2);
-
-    // Reset button
-    const resetButtonY = modeButtonY + this.buttonHeight + this.buttonMargin;
-    fill(this.isHoveringReset ? '#d44937' : '#e74c3c');
-    rect(this.padding, resetButtonY, 
-         this.width - this.padding * 2, this.buttonHeight, 4);
-    
-    // Reset button text
-    fill(255);
-    text('Mostra Artisti Top',
-         this.width / 2, resetButtonY + this.buttonHeight / 2);
-
-    // Draw tags table
-    if (topTags.length > 0) {
-      // Get current tag from URL
-      const currentTag = getUrlParameter('tag');
-
-      // Table header
+    // Set button style based on mode
+    if (!isIsolationMode) {
+      // Active state - red background
+      fill(this.isHovered ? color(224, 49, 66, 220) : '#e03142');
+      noStroke();
+      rect(pos.x, pos.y, this.width, this.height, 0);
+      
+      // White text
       fill(255);
-      textAlign(LEFT, CENTER);
-      textSize(14);
-      text('Tag', this.padding, this.tableTop);
-      textAlign(RIGHT, CENTER);
-      text('Count', this.width - this.padding - 80, this.tableTop);
-      text('Reach', this.width - this.padding, this.tableTop);
-
-      // Table rows
-      for (let i = 0; i < Math.min(20, topTags.length); i++) {
-        const tag = topTags[i];
-        const y = this.tableTop + (i + 1) * this.rowHeight;
-        
-        // Alternate row background
-        if (i % 2 === 0) {
-          fill(255, 255, 255, 20);
-          noStroke();
-          rect(this.padding, y - this.rowHeight/2, 
-               this.width - this.padding * 2, this.rowHeight);
-        }
-        
-        // Tag data
-        fill(255);
-        textAlign(LEFT, CENTER);
-        
-        // Highlight conditions
-        const isCurrentTag = currentTag && tag.name.toLowerCase() === currentTag.toLowerCase();
-        const isHovered = i === this.hoveredTagIndex;
-        
-        // Apply highlighting
-        if (isCurrentTag) {
-          // Selected tag gets a distinctive background
-          fill('#2196F3');  // Blue background for selected tag
-          noStroke();
-          rect(this.padding, y - this.rowHeight/2, 
-               this.width - this.padding * 2, this.rowHeight);
-          fill(255);  // White text for selected tag
-        }
-        if (isHovered) {
-          fill('#4CAF50');  // Green text for hover
-          cursor(HAND);
-        }
-        
-        text(tag.name, this.padding, y);
-        fill(isCurrentTag ? 255 : 255);  // Keep text white if selected
-        textAlign(RIGHT, CENTER);
-        text(tag.count.toLocaleString(), this.width - this.padding - 80, y);
-        text(tag.reach.toLocaleString(), this.width - this.padding, y);
-      }
+    } else {
+      // Inactive state - semi-transparent white background
+      fill(255, 127); // 50% opacity white
+      noStroke();
+      rect(pos.x, pos.y, this.width, this.height, 0);
+      
+      // Black text
+      fill(0);
     }
+    
+    // Draw text
+    textAlign(CENTER, CENTER);
+    textSize(14);
+    textStyle(BOLD);
+    text(this.labelText, pos.x + this.width/2, pos.y + this.height/2);
   }
 }
 
-let sideMenu;
+let headerButtons;
+let modeButton;
 let currentViewTitle = "Top artisti ascoltati";
 
 function setup() {
-  // Create canvas the size of the viewport minus the menu width
+  // Create canvas the full size of the viewport
   createCanvas(windowWidth, windowHeight);
-  // Initialize menu
-  sideMenu = new SideMenu();
-  // Calculate effective width
-  effectiveWidth = windowWidth - sideMenu.width;
+  // Set font to Titillium Web
+  textFont('Titillium Web');
+  // Initialize UI components
+  headerButtons = new HeaderButtons();
+  modeButton = new ModeButton();
   // Initialize window variable for communication with HTML
   window.isIsolationMode = isIsolationMode;
   // Fetch both artists and tags
@@ -527,42 +755,39 @@ function setup() {
 }
 
 function mousePressed() {
-  // First check if we clicked on the menu
-  if (sideMenu.contains(mouseX, mouseY)) {
-    if (sideMenu.handleClick(mouseX, mouseY)) {
-      return; // Click was handled by menu
-    }
+  // First check if we clicked on the mode button
+  if (modeButton.handleClick(mouseX, mouseY)) {
+    return; // Click was handled by mode button
   }
-
-  // Adjust mouseX to account for menu offset when checking bubbles
-  const adjustedMouseX = mouseX - sideMenu.width;
+  
+  // Then check if we clicked on the header buttons
+  if (headerButtons.handleClick(mouseX, mouseY)) {
+    return; // Click was handled by header buttons
+  }
   
   // Check if we clicked on a bubble
   for (let bubble of bubbles) {
-    if (bubble.contains(adjustedMouseX, mouseY)) {
+    if (bubble.contains(mouseX, mouseY)) {
       // Only fetch similar artists if we haven't already
       if (!bubble.similarArtistsFetched) {
         // Update title
         currentViewTitle = `Artisti simili a ${bubble.name}`;
         
-        // Handle first click - remove default bubbles
-        if (!hasFirstClick) {
-          // First click always removes default bubbles
-          bubbles = bubbles.filter(b => b === bubble);
-          connections = [];
-          hasFirstClick = true;
-        } 
-        // Handle subsequent clicks based on mode
-        else if (isIsolationMode) {
-          // In isolation mode, remove all except the clicked bubble
-          bubbles = bubbles.filter(b => b === bubble);
-          connections = [];
-        }
-        // In cumulative mode, we don't filter any bubbles or connections
+                 // Handle clicks based on mode
+         if (isIsolationMode) {
+           // In isolation mode, remove all except the clicked bubble
+           bubbles = bubbles.filter(b => b === bubble);
+           connections = [];
+         }
+         // In cumulative mode (apertura multipla), keep all bubbles
+         hasFirstClick = true;
         
         // Store the current bubbles and connections before fetching
         const currentBubbles = isIsolationMode ? [bubble] : [...bubbles];
         const currentConnections = isIsolationMode ? [] : [...connections];
+        
+        // Start loading animation
+        bubble.isLoading = true;
         
         // After fetching completes, merge with existing if in cumulative mode
         fetchSimilarArtists(bubble.name, bubble).then(() => {
@@ -571,10 +796,13 @@ function mousePressed() {
             bubbles = [...currentBubbles, ...bubbles.filter(b => !currentBubbles.includes(b))];
             connections = [...currentConnections, ...connections];
           }
+          // Stop loading animation
+          bubble.isLoading = false;
         });
         
-        bubble.similarArtistsFetched = true; // Mark as fetched
-        lastClickedBubble = bubble; // Update last clicked bubble
+                 bubble.similarArtistsFetched = true; // Mark as fetched
+         bubble.isClicked = true; // Mark this bubble as clicked
+         lastClickedBubble = bubble; // Update last clicked bubble (manteniamo questo per altre funzionalità)
       }
       break;
     }
@@ -584,7 +812,6 @@ function mousePressed() {
 // Handle window resize
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  effectiveWidth = windowWidth - sideMenu.width;
   if (artists.length > 0) {
     createBubbles(); // Recreate bubbles with new canvas dimensions
   }
@@ -593,22 +820,10 @@ function windowResized() {
 function draw() {
   // Sync isolation mode with window variable
   window.isIsolationMode = isIsolationMode;
-  background('#1c2128');
+  background('#1c2838');
   
-  // Draw menu first
-  push();
-  sideMenu.show();
-  pop();
-  
-  // Translate everything else to account for menu width
-  push();
-  translate(sideMenu.width, 0);
-  
-  // Draw title
-  fill(255);
-  textAlign(LEFT, TOP);
-  textSize(24);
-  text(currentViewTitle, 20, 20);
+  // Check button interactions
+  headerButtons.checkButtons(mouseX, mouseY);
   
   // Find connected bubbles if there's a hovered bubble
   let connectedBubbles = new Set();
@@ -625,13 +840,13 @@ function draw() {
   // Draw connections first so they appear behind bubbles
   for (let connection of connections) {
     // Highlight connections if they involve the hovered bubble
-    if (hoveredBubble && 
-        (connection.source === hoveredBubble || connection.target === hoveredBubble)) {
-      stroke(150, 150, 255); // Solid color for highlighted connections
-      strokeWeight(3);
-    } else {
-      stroke(150, 150, 255, 100); // Semi-transparent for normal connections
-      strokeWeight(2);
+         if (hoveredBubble && 
+         (connection.source === hoveredBubble || connection.target === hoveredBubble)) {
+       stroke('#D48CC8'); // Rosa chiaro come il gradiente delle bolle cliccate
+       strokeWeight(2);
+     } else {
+       stroke(255); // Bianco pieno per le altre connessioni
+       strokeWeight(1);
     }
     line(connection.source.x, connection.source.y, 
          connection.target.x, connection.target.y);
@@ -640,12 +855,10 @@ function draw() {
   // Update hoveredBubble
   hoveredBubble = null;
   // Check bubbles in reverse order to detect top-most bubble first
-  if (!sideMenu.contains(mouseX, mouseY)) {
-    for (let i = bubbles.length - 1; i >= 0; i--) {
-      if (bubbles[i].containsWithOffset(mouseX, mouseY, sideMenu.width)) {
-        hoveredBubble = bubbles[i];
-        break;
-      }
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    if (bubbles[i].contains(mouseX, mouseY)) {
+      hoveredBubble = bubbles[i];
+      break;
     }
   }
 
@@ -676,18 +889,27 @@ function draw() {
     // Show pointer cursor only if we haven't fetched similar artists yet
     cursor(hoveredBubble.similarArtistsFetched ? ARROW : HAND);
   } else {
-    // Check if hovering over menu buttons
-    if (sideMenu.contains(mouseX, mouseY)) {
-      if (sideMenu.checkButtons(mouseX, mouseY)) {
-        cursor(HAND);
-      } else {
-        cursor(ARROW);
-      }
+    // Check if hovering over header buttons
+    if (headerButtons.checkButtons(mouseX, mouseY)) {
+      cursor(HAND);
     } else {
       cursor(ARROW);
     }
   }
   
-  // End translation for main content
-  pop();
+  // Draw UI elements on top of everything
+  // First the header buttons
+  headerButtons.showButtons();
+  
+  // Then the mode button
+  modeButton.checkHover(mouseX, mouseY);
+  modeButton.show();
+  
+  // Finally the dropdown menu
+  headerButtons.showDropdown();
+  
+  // Update cursor for button hover
+  if ((modeButton.isHovered || headerButtons.checkButtons(mouseX, mouseY)) && !hoveredBubble) {
+    cursor(HAND);
+  }
 }
