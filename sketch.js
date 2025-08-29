@@ -53,9 +53,10 @@ class Bubble {
     this.vy = random(-1, 1);
     this.isSimilar = isSimilar;
     this.parentBubble = parentBubble;
-    this.similarArtistsFetched = false; // Track if we've already fetched similar artists
-    this.isLoading = false; // Track if we're loading
-    this.loadingAngle = 0; // Track the loading angle
+         this.similarArtistsFetched = false; // Track if we've already fetched similar artists
+     this.isLoading = false; // Track if we're loading
+     this.loadingAngle = 0; // Track the loading angle
+     this.isClicked = false; // Track if this bubble has been clicked
   }
 
   collide(other) {
@@ -138,21 +139,38 @@ class Bubble {
     show(isHighlighted = false) {
      push(); // Salva lo stato corrente
      
-     // Draw the bubble fill
-     // Different color based on state (clicked, similar, or default)
-     if (this === lastClickedBubble || this.isSimilar) {
-       // Pink background with white stroke for clicked and similar artists
-       stroke(255);
-       strokeWeight(2);
-       fill('#ca329a');
+           if (this.isClicked) {
+        // Gradient per tutti gli artisti che sono stati cliccati
+        stroke(255);
+        strokeWeight(2);
+        const gradient = drawingContext.createLinearGradient(
+          this.x, this.y - this.r,     // Punto di inizio (alto)
+          this.x, this.y + this.r      // Punto di fine (basso)
+        );
+        
+        // Aggiungiamo i colori del gradiente viola-rosa
+        gradient.addColorStop(0, '#D48CC8');    // Rosa chiaro in alto
+        gradient.addColorStop(1, '#7B1B7A');    // Viola scuro in basso
+        
+        drawingContext.fillStyle = gradient;
      } else {
-       // Default blue background without stroke
+       // Creiamo il gradiente per le bolle normali
        noStroke();
-       fill('#018ca9');
+       const gradient = drawingContext.createLinearGradient(
+         this.x, this.y - this.r,     // Punto di inizio (alto)
+         this.x, this.y + this.r      // Punto di fine (basso)
+       );
+       
+       // Aggiungiamo i colori del gradiente
+       gradient.addColorStop(0, '#4ADBB2');    // Verde acqua in alto
+       gradient.addColorStop(1, '#1E8B99');    // Blu più scuro in basso
+       
+       drawingContext.fillStyle = gradient;
      }
+     
      ellipse(this.x, this.y, this.r * 2);
      
-     pop(); // Ripristina lo stato precedente (rimuove lo stroke)
+     pop(); // Ripristina lo stato precedente
     
     // Draw loading animation if needed
     if (this.isLoading) {
@@ -260,16 +278,31 @@ async function fetchSimilarArtists(artistName, parentBubble) {
         // Check if this artist already exists
         const existingBubble = bubbles.find(b => b.name === artist.name);
         
-        if (existingBubble) {
-          // If already exists, just create a connection if not already connected
-          const connectionExists = connections.some(
-            c => (c.source === parentBubble && c.target === existingBubble) ||
-                 (c.source === existingBubble && c.target === parentBubble)
-          );
-          if (!connectionExists) {
-            connections.push(new Connection(parentBubble, existingBubble));
-          }
-        } else {
+                 if (existingBubble) {
+           // Se l'artista esiste già
+           // Prima creiamo la connessione con l'artista parent se non esiste
+           const connectionWithParentExists = connections.some(
+             c => (c.source === parentBubble && c.target === existingBubble) ||
+                  (c.source === existingBubble && c.target === parentBubble)
+           );
+           if (!connectionWithParentExists) {
+             connections.push(new Connection(parentBubble, existingBubble));
+           }
+
+           // Poi controlliamo le connessioni con gli altri artisti simili di questo gruppo
+           similarArtistsInfo.forEach(otherArtist => {
+             const otherBubble = bubbles.find(b => b.name === otherArtist.name);
+             if (otherBubble && otherBubble !== existingBubble) {
+               const connectionExists = connections.some(
+                 c => (c.source === existingBubble && c.target === otherBubble) ||
+                      (c.source === otherBubble && c.target === existingBubble)
+               );
+               if (!connectionExists) {
+                 connections.push(new Connection(existingBubble, otherBubble));
+               }
+             }
+           });
+         } else {
           // Create new bubble if doesn't exist
           const radius = map(artist.playcount, 0, maxPlaycount, 20, 60);
           const angle = random(TWO_PI);
@@ -584,26 +617,26 @@ class HeaderButtons {
   }
 }
 
-class ModeCheckbox {
+class ModeButton {
   constructor() {
-    this.size = 20;
-    this.padding = 15;
+    this.width = 200;
+    this.height = 50;
+    this.margin = 0;
     this.isHovered = false;
-    this.labelText = "apertura multipla";
+    this.labelText = "Modalità accumulativa";
   }
 
   getPosition() {
     return {
-      x: windowWidth - this.padding - this.size - textWidth(this.labelText) - 10,
-      y: windowHeight - this.padding - this.size
+      x: windowWidth - this.width - this.margin,
+      y: windowHeight - this.height - this.margin
     };
   }
 
   contains(px, py) {
     const pos = this.getPosition();
-    const totalWidth = this.size + 10 + textWidth(this.labelText);
-    return px >= pos.x && px <= pos.x + totalWidth &&
-           py >= pos.y && py <= pos.y + this.size;
+    return px >= pos.x && px <= pos.x + this.width &&
+           py >= pos.y && py <= pos.y + this.height;
   }
 
   checkHover(px, py) {
@@ -622,43 +655,35 @@ class ModeCheckbox {
   show() {
     const pos = this.getPosition();
     
-    // Draw checkbox background
-    fill(255);
-    stroke(150);
-    strokeWeight(2);
-    rect(pos.x, pos.y, this.size, this.size, 3);
-    
-    // Draw checkmark if in cumulative mode (not isolation mode)
+    // Set button style based on mode
     if (!isIsolationMode) {
-      noFill();
-      stroke(50, 150, 50);
-      strokeWeight(3);
-      strokeCap(ROUND);
-      // Draw checkmark
-      line(pos.x + 4, pos.y + this.size/2, 
-           pos.x + this.size/2, pos.y + this.size - 4);
-      line(pos.x + this.size/2, pos.y + this.size - 4, 
-           pos.x + this.size - 4, pos.y + 4);
-    }
-    
-    // Draw label
-    fill(255);
-    noStroke();
-    textAlign(LEFT, CENTER);
-    textSize(14);
-    text(this.labelText, pos.x + this.size + 10, pos.y + this.size/2);
-    
-    // Show hover effect
-    if (this.isHovered) {
-      fill(255, 255, 255, 50);
+      // Active state - red background
+      fill(this.isHovered ? color(224, 49, 66, 220) : '#e03142');
       noStroke();
-      rect(pos.x - 5, pos.y - 5, this.size + 10 + textWidth(this.labelText) + 10, this.size + 10, 5);
+      rect(pos.x, pos.y, this.width, this.height, 0);
+      
+      // White text
+      fill(255);
+    } else {
+      // Inactive state - semi-transparent white background
+      fill(255, 127); // 50% opacity white
+      noStroke();
+      rect(pos.x, pos.y, this.width, this.height, 0);
+      
+      // Black text
+      fill(0);
     }
+    
+    // Draw text
+    textAlign(CENTER, CENTER);
+    textSize(14);
+    textStyle(BOLD);
+    text(this.labelText, pos.x + this.width/2, pos.y + this.height/2);
   }
 }
 
 let headerButtons;
-let modeCheckbox;
+let modeButton;
 let currentViewTitle = "Top artisti ascoltati";
 
 function setup() {
@@ -666,9 +691,9 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   // Set font to Titillium Web
   textFont('Titillium Web');
-  // Initialize header buttons and checkbox
+  // Initialize UI components
   headerButtons = new HeaderButtons();
-  modeCheckbox = new ModeCheckbox();
+  modeButton = new ModeButton();
   // Initialize window variable for communication with HTML
   window.isIsolationMode = isIsolationMode;
   // Fetch both artists and tags
@@ -677,9 +702,9 @@ function setup() {
 }
 
 function mousePressed() {
-  // First check if we clicked on the checkbox
-  if (modeCheckbox.handleClick(mouseX, mouseY)) {
-    return; // Click was handled by checkbox
+  // First check if we clicked on the mode button
+  if (modeButton.handleClick(mouseX, mouseY)) {
+    return; // Click was handled by mode button
   }
   
   // Then check if we clicked on the header buttons
@@ -695,20 +720,14 @@ function mousePressed() {
         // Update title
         currentViewTitle = `Artisti simili a ${bubble.name}`;
         
-        // Handle first click - remove default bubbles
-        if (!hasFirstClick) {
-          // First click always removes default bubbles
-          bubbles = bubbles.filter(b => b === bubble);
-          connections = [];
-          hasFirstClick = true;
-        } 
-        // Handle subsequent clicks based on mode
-        else if (isIsolationMode) {
-          // In isolation mode, remove all except the clicked bubble
-          bubbles = bubbles.filter(b => b === bubble);
-          connections = [];
-        }
-        // In cumulative mode, we don't filter any bubbles or connections
+                 // Handle clicks based on mode
+         if (isIsolationMode) {
+           // In isolation mode, remove all except the clicked bubble
+           bubbles = bubbles.filter(b => b === bubble);
+           connections = [];
+         }
+         // In cumulative mode (apertura multipla), keep all bubbles
+         hasFirstClick = true;
         
         // Store the current bubbles and connections before fetching
         const currentBubbles = isIsolationMode ? [bubble] : [...bubbles];
@@ -728,8 +747,9 @@ function mousePressed() {
           bubble.isLoading = false;
         });
         
-        bubble.similarArtistsFetched = true; // Mark as fetched
-        lastClickedBubble = bubble; // Update last clicked bubble
+                 bubble.similarArtistsFetched = true; // Mark as fetched
+         bubble.isClicked = true; // Mark this bubble as clicked
+         lastClickedBubble = bubble; // Update last clicked bubble (manteniamo questo per altre funzionalità)
       }
       break;
     }
@@ -767,13 +787,13 @@ function draw() {
   // Draw connections first so they appear behind bubbles
   for (let connection of connections) {
     // Highlight connections if they involve the hovered bubble
-    if (hoveredBubble && 
-        (connection.source === hoveredBubble || connection.target === hoveredBubble)) {
-      stroke(150, 150, 255); // Solid color for highlighted connections
-      strokeWeight(3);
-    } else {
-      stroke(150, 150, 255, 100); // Semi-transparent for normal connections
-      strokeWeight(2);
+         if (hoveredBubble && 
+         (connection.source === hoveredBubble || connection.target === hoveredBubble)) {
+       stroke('#D48CC8'); // Rosa chiaro come il gradiente delle bolle cliccate
+       strokeWeight(2);
+     } else {
+       stroke(255); // Bianco pieno per le altre connessioni
+       strokeWeight(1);
     }
     line(connection.source.x, connection.source.y, 
          connection.target.x, connection.target.y);
@@ -828,15 +848,15 @@ function draw() {
   // First the header buttons
   headerButtons.showButtons();
   
-  // Then the checkbox
-  modeCheckbox.checkHover(mouseX, mouseY);
-  modeCheckbox.show();
+  // Then the mode button
+  modeButton.checkHover(mouseX, mouseY);
+  modeButton.show();
   
   // Finally the dropdown menu
   headerButtons.showDropdown();
   
-  // Update cursor for checkbox hover
-  if (modeCheckbox.isHovered && !hoveredBubble) {
+  // Update cursor for button hover
+  if ((modeButton.isHovered || headerButtons.checkButtons(mouseX, mouseY)) && !hoveredBubble) {
     cursor(HAND);
   }
 }
