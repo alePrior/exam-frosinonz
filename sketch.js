@@ -80,6 +80,45 @@ class Bubble {
     }
   }
 
+  checkButtonCollision() {
+    // Check collision with header buttons
+    const headerButtonHeight = 50;
+    if (this.y - this.r < headerButtonHeight) {
+      this.y = headerButtonHeight + this.r;
+      this.vy *= -0.8;
+    }
+
+    // Check collision with mode button
+    const modeBtn = modeButton.getPosition();
+    const modeBtnWidth = modeButton.width;
+    const modeBtnHeight = modeButton.height;
+
+    // Calculate the closest point on the button to the circle
+    const closestX = constrain(this.x, modeBtn.x, modeBtn.x + modeBtnWidth);
+    const closestY = constrain(this.y, modeBtn.y, modeBtn.y + modeBtnHeight);
+
+    // Calculate the distance between the circle's center and the closest point
+    const distanceX = this.x - closestX;
+    const distanceY = this.y - closestY;
+    const distance = sqrt(distanceX * distanceX + distanceY * distanceY);
+
+    // If the distance is less than the circle's radius, there is a collision
+    if (distance < this.r) {
+      // Calculate the normal vector
+      const nx = distanceX / distance;
+      const ny = distanceY / distance;
+
+      // Move the circle out of the button
+      this.x = closestX + nx * this.r;
+      this.y = closestY + ny * this.r;
+
+      // Reflect the velocity vector
+      const dotProduct = this.vx * nx + this.vy * ny;
+      this.vx = (this.vx - 2 * dotProduct * nx) * 0.8;
+      this.vy = (this.vy - 2 * dotProduct * ny) * 0.8;
+    }
+  }
+
   update(isHovered = false) {
     if (!isHovered) { // Only update movement if not hovered
       // Add uniform circular movement
@@ -118,6 +157,9 @@ class Bubble {
       // Keep inside canvas
       this.x = constrain(this.x, this.r, width - this.r);
       this.y = constrain(this.y, this.r, height - this.r);
+
+      // Check collision with buttons
+      this.checkButtonCollision();
 
       // Add gentle friction
       this.vx *= 0.995;
