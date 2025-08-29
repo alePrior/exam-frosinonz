@@ -191,9 +191,15 @@ class Bubble {
         // Gradient per tutti gli artisti che sono stati cliccati
         stroke(255);
         strokeWeight(2);
+        // Ensure coordinates are valid numbers
+        const startX = isFinite(this.x) ? this.x : 0;
+        const startY = isFinite(this.y - this.r) ? this.y - this.r : 0;
+        const endX = isFinite(this.x) ? this.x : 0;
+        const endY = isFinite(this.y + this.r) ? this.y + this.r : 0;
+        
         const gradient = drawingContext.createLinearGradient(
-          this.x, this.y - this.r,     // Punto di inizio (alto)
-          this.x, this.y + this.r      // Punto di fine (basso)
+          startX, startY,     // Punto di inizio (alto)
+          endX, endY      // Punto di fine (basso)
         );
         
         // Aggiungiamo i colori del gradiente viola-rosa
@@ -204,9 +210,15 @@ class Bubble {
      } else {
        // Creiamo il gradiente per le bolle normali
        noStroke();
+       // Ensure coordinates are valid numbers
+       const startX = isFinite(this.x) ? this.x : 0;
+       const startY = isFinite(this.y - this.r) ? this.y - this.r : 0;
+       const endX = isFinite(this.x) ? this.x : 0;
+       const endY = isFinite(this.y + this.r) ? this.y + this.r : 0;
+       
        const gradient = drawingContext.createLinearGradient(
-         this.x, this.y - this.r,     // Punto di inizio (alto)
-         this.x, this.y + this.r      // Punto di fine (basso)
+         startX, startY,     // Punto di inizio (alto)
+         endX, endY      // Punto di fine (basso)
        );
        
        // Aggiungiamo i colori del gradiente
