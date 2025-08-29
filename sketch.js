@@ -582,7 +582,7 @@ class HeaderButtons {
      textAlign(CENTER, CENTER);
      textSize(14);
      textStyle(BOLD);
-     text('Top 50 tag', this.buttonWidth/2 - 10, this.buttonHeight/2);
+     text('Top tags', this.buttonWidth/2 - 10, this.buttonHeight/2);
      
      // Draw caret
      const caretX = this.buttonWidth - 20;
@@ -626,7 +626,7 @@ class HeaderButtons {
      
      textStyle(BOLD);
      textSize(14);
-     text('Top 50 artisti', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
+     text('Top artisti ascoltati', artistsButtonX + this.buttonWidth/2, this.buttonHeight/2);
     
     // Draw status text to the right of buttons
     fill(255);
