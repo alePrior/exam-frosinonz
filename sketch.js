@@ -753,7 +753,9 @@ let currentViewTitle = "Top artisti ascoltati";
 
 function setup() {
   // Create canvas the full size of the viewport
-  createCanvas(windowWidth, windowHeight);
+  const canvas = createCanvas(windowWidth, windowHeight);
+  // Inserisci il canvas nel div specifico
+  canvas.parent('canvas-container');
   // Set font to Titillium Web
   textFont('Titillium Web');
   // Initialize UI components
@@ -767,6 +769,13 @@ function setup() {
 }
 
 function mousePressed() {
+
+  // Prendi il valore di localStorage "popupClosed"
+  const isPopupClosed = localStorage.getItem('popupClosed');
+  if (isPopupClosed == 'false') {
+    return; // Se il popup è chiuso, non fare nulla
+  }
+
   // First check if we clicked on the mode button
   if (modeButton.handleClick(mouseX, mouseY)) {
     return; // Click was handled by mode button
@@ -895,8 +904,10 @@ function draw() {
     bubbles[i].show(isHighlighted);
   }
 
+  const isPopupClosed = localStorage.getItem('popupClosed');
+
   // Draw tooltip for hovered bubble
-  if (hoveredBubble) {
+  if (hoveredBubble && isPopupClosed == 'true') {
     hoveredBubble.showTooltip();
     // Show pointer cursor only if we haven't fetched similar artists yet
     cursor(hoveredBubble.similarArtistsFetched ? ARROW : HAND);
