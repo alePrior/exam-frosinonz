@@ -47,9 +47,6 @@ ArtistScope è un'applicazione web interattiva che visualizza gli artisti più a
 ## Caratteristiche Tecniche
 
 ### API Integration
-```javascript
-const api_key = "262eda05c5e0a4265750d3cfb1611332";
-```
 Integrazione con tre endpoint principali di Last.fm:
 - chart.getTopArtists
 - tag.getTopTags
