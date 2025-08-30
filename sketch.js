@@ -189,8 +189,13 @@ class Bubble {
       
       if (this.isClicked) {
         // Gradient per tutti gli artisti che sono stati cliccati
-        stroke(255);
-        strokeWeight(2);
+        if (!isHighlighted || this === hoveredBubble) {
+          stroke(255);
+          strokeWeight(2);
+        } else {
+          stroke('#4A235A'); // Viola scuro
+          strokeWeight(3);
+        }
         // Ensure coordinates are valid numbers
         const startX = isFinite(this.x) ? this.x : 0;
         const startY = isFinite(this.y - this.r) ? this.y - this.r : 0;
@@ -234,6 +239,14 @@ class Bubble {
       drawingContext.shadowBlur = 0;
       drawingContext.shadowOffsetX = 0;
       drawingContext.shadowOffsetY = 0;
+      
+      // Se la bolla è evidenziata (artista simile all'artista su cui si fa hover)
+      if (isHighlighted && !this.isClicked && this !== hoveredBubble) {
+        stroke('#9145b0'); // Viola scuro
+        strokeWeight(4);
+        noFill();
+        ellipse(this.x, this.y, this.r * 2); // Ridisegna l'ellisse solo per il bordo
+      }
       
       pop(); // Ripristina lo stato precedente
     
